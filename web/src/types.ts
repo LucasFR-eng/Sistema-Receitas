@@ -40,6 +40,10 @@ export interface RecipeSummary {
 
 export interface Recipe extends Omit<RecipeSummary, "user"> {
   freeText: string | null;
+  // Receita em que esta se baseou ("Fazer minha versão"). Sem id/name quando a original não está mais visível
+  basedOn: { author: { name: string; username: string }; id?: string; name?: string } | null;
+  // Quantas versões públicas outras pessoas fizeram desta receita
+  versionsCount: number;
   // Só vem para o dono da receita
   sourceText?: string | null;
   user: RecipeAuthor & { id: string };
@@ -90,4 +94,5 @@ export interface RecipeInput {
   steps: string[];
   allowDuplicate?: boolean;
   importId?: string;
+  originalRecipeId?: string;
 }

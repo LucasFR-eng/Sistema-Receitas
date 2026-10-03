@@ -67,6 +67,8 @@ const recipeInputSchema = z
     allowDuplicate: z.boolean().optional(),
     // Importação com IA que originou a receita (para histórico)
     importId: z.uuid().optional(),
+    // Receita de outra pessoa que serviu de base ("Fazer minha versão"); só vale na criação
+    originalRecipeId: z.uuid().optional(),
   })
   .superRefine((data, ctx) => {
     // Rascunho pode ficar incompleto; para publicar, precisa de ingredientes e passos
@@ -183,15 +185,44 @@ export async function recipeRoutes(app: FastifyInstance) {
     // Receita privada ou rascunho de outra pessoa: responde como se não existisse
     if (!recipe || (!isOwner && !isPublicRecipe(recipe))) return reply.status(404).send(notFound);
 
+    // Crédito da receita original. O autor sempre aparece; o link só se quem está vendo
+    // ainda pode abrir a original (pública, ou do próprio visitante)
+    const { originalRecipe, originalRecipeId: _originalId, ...rest } = recipe;
+    const basedOn = originalRecipe && {
+      author: { name: originalRecipe.user.name, username: originalRecipe.user.username },
+      ...((isPublicRecipe(originalRecipe) || originalRecipe.userId === userId) && {
+        id: originalRecipe.id,
+        name: originalRecipe.name,
+      }),
+    };
+
     // O texto original é material de trabalho do dono; não vai para quem só está vendo a receita
-    const [detailed] = await withFavorites([recipe], userId);
+    const [detailed] = await withFavorites([rest], userId);
     const { fingerprint: _, sourceText, ...publicRecipe } = detailed!;
-    return { recipe: isOwner ? { ...publicRecipe, sourceText } : publicRecipe, isOwner };
+    const response = { ...publicRecipe, basedOn, versionsCount: recipe._count.versions };
+    return { recipe: isOwner ? { ...response, sourceText } : response, isOwner };
   });
 
   app.post("/recipes", { onRequest: [app.authenticate] }, async (request, reply) => {
     const userId = request.user.sub;
-    const { allowDuplicate, importId, ingredients, steps, ...fields } = recipeInputSchema.parse(request.body);
+    const { allowDuplicate, importId, originalRecipeId, ingredients, steps, ...fields } = recipeInputSchema.parse(
+      request.body,
+    );
+
+    // A receita de origem precisa ser pública e de outra pessoa
+    if (originalRecipeId) {
+      const original = await prisma.recipe.findUnique({
+        where: { id: originalRecipeId },
+        select: { userId: true, status: true, visibility: true },
+      });
+      if (!original || !isPublicRecipe(original)) {
+        return reply.status(400).send({ message: "A receita original não está mais disponível" });
+      }
+      if (original.userId === userId) {
+        return reply.status(400).send({ message: "Essa receita já é sua. Para mudar algo, é só editá-la." });
+      }
+    }
+
     const fingerprint = computeFingerprint(
       fields.name,
       ingredients.map((ingredient) => ingredient.item),
@@ -216,6 +247,7 @@ export async function recipeRoutes(app: FastifyInstance) {
         ...fields,
         userId,
         fingerprint,
+        originalRecipeId: originalRecipeId ?? null,
         ingredients: { create: buildIngredients(ingredients) },
         steps: { create: buildSteps(steps) },
       },
@@ -248,6 +280,8 @@ export async function recipeRoutes(app: FastifyInstance) {
     const {
       allowDuplicate: _allowDuplicate,
       importId: _importId,
+      // O crédito da receita original não muda depois de criada
+      originalRecipeId: _originalRecipeId,
       ingredients,
       steps,
       ...fields

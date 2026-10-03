@@ -67,6 +67,26 @@ export function RecipeDetailPage() {
           <p className="mt-2 text-stone-600">
             por <span className="font-medium text-stone-800">{recipe.user.name}</span> · @{recipe.user.username}
           </p>
+          {recipe.basedOn && (
+            <p className="mt-1 text-sm text-stone-600">
+              🔁 Baseada na receita{" "}
+              {recipe.basedOn.id ? (
+                <Link to={`/receitas/${recipe.basedOn.id}`} className="font-medium text-brand-700 hover:underline">
+                  {recipe.basedOn.name}
+                </Link>
+              ) : (
+                "original"
+              )}{" "}
+              de @{recipe.basedOn.author.username}
+            </p>
+          )}
+          {recipe.versionsCount > 0 && (
+            <p className="mt-1 text-sm text-stone-500">
+              {recipe.versionsCount === 1
+                ? "1 pessoa fez a sua versão desta receita"
+                : `${recipe.versionsCount} pessoas fizeram a sua versão desta receita`}
+            </p>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -76,6 +96,14 @@ export function RecipeDetailPage() {
             isFavorited={recipe.isFavorited}
             favoritesCount={recipe.favoritesCount}
           />
+          {!isOwner && (
+            <Link
+              to={`/receitas/${recipe.id}/minha-versao`}
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm ring-1 ring-stone-300 transition hover:bg-stone-50"
+            >
+              🔁 Fazer minha versão
+            </Link>
+          )}
           {isOwner && (
             <>
               <Link

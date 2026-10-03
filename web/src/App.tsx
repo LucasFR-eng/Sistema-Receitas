@@ -11,6 +11,7 @@ import { NewRecipePage } from "./pages/NewRecipePage.tsx";
 import { NotFoundPage } from "./pages/NotFoundPage.tsx";
 import { RecipeDetailPage } from "./pages/RecipeDetailPage.tsx";
 import { RegisterPage } from "./pages/RegisterPage.tsx";
+import { RemixRecipePage } from "./pages/RemixRecipePage.tsx";
 
 export default function App() {
   return (
@@ -36,6 +37,14 @@ export default function App() {
               element={
                 <RequireAuth>
                   <EditRecipePage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/receitas/:id/minha-versao"
+              element={
+                <RequireAuth>
+                  <RemixRecipePage />
                 </RequireAuth>
               }
             />

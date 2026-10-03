@@ -1,5 +1,21 @@
-import type { Difficulty } from "../types.ts";
-import { API_URL } from "./api.ts";
+import type { Difficulty, RecipeInput } from "../types.ts";
+import { api, API_URL, ApiError } from "./api.ts";
+
+// Cria uma receita. Se já existir uma igual do usuário, pergunta antes de salvar mesmo assim.
+// Devolve o id da receita criada, ou null se o usuário desistir.
+export async function createRecipe(input: RecipeInput): Promise<string | null> {
+  try {
+    const { recipe } = await api<{ recipe: { id: string } }>("/recipes", { method: "POST", body: input });
+    return recipe.id;
+  } catch (err) {
+    if (err instanceof ApiError && err.data.code === "DUPLICATE_RECIPE") {
+      return window.confirm(`${err.message}.\n\nSalvar mesmo assim?`)
+        ? createRecipe({ ...input, allowDuplicate: true })
+        : null;
+    }
+    throw err;
+  }
+}
 
 // Cópia da lista da API (api/src/lib/categories.ts) — mantenha as duas iguais
 export const RECIPE_CATEGORIES = [

@@ -9,7 +9,24 @@ export const recipeInclude = {
     select: { id: true, quantity: true, unit: true, item: true },
   },
   steps: { orderBy: { position: "asc" }, select: { id: true, description: true } },
-  _count: { select: { favorites: true } },
+  // Receita de outra pessoa em que esta se baseou ("Fazer minha versão")
+  originalRecipe: {
+    select: {
+      id: true,
+      name: true,
+      userId: true,
+      status: true,
+      visibility: true,
+      user: { select: { name: true, username: true } },
+    },
+  },
+  _count: {
+    select: {
+      favorites: true,
+      // Conta só as versões que qualquer pessoa pode ver
+      versions: { where: { status: "PUBLISHED", visibility: "PUBLIC" } },
+    },
+  },
 } satisfies Prisma.RecipeInclude;
 
 // Dados resumidos, usados nos cards das listas

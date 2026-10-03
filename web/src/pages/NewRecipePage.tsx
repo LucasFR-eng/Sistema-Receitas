@@ -4,8 +4,8 @@ import { AiWarnings } from "../components/AiWarnings.tsx";
 import { ImportPanel } from "../components/ImportPanel.tsx";
 import { RecipeForm } from "../components/RecipeForm.tsx";
 import { useAiReorganize } from "../hooks/useAiReorganize.ts";
-import { api, ApiError } from "../lib/api.ts";
 import { draftToFormValues } from "../lib/imports.ts";
+import { createRecipe } from "../lib/recipes.ts";
 import type { ImportResponse, RecipeInput } from "../types.ts";
 
 type Mode = "import" | "manual";
@@ -29,22 +29,8 @@ export function NewRecipePage() {
   }
 
   async function handleSave(input: RecipeInput) {
-    try {
-      const { recipe } = await api<{ recipe: { id: string } }>("/recipes", {
-        method: "POST",
-        body: { ...input, importId: imported?.import.id },
-      });
-      navigate(`/receitas/${recipe.id}`);
-    } catch (err) {
-      // Receita igual a outra do usuário: pergunta antes de salvar mesmo assim
-      if (err instanceof ApiError && err.data.code === "DUPLICATE_RECIPE") {
-        if (window.confirm(`${err.message}.\n\nSalvar mesmo assim?`)) {
-          return handleSave({ ...input, allowDuplicate: true });
-        }
-        return;
-      }
-      throw err;
-    }
+    const id = await createRecipe({ ...input, importId: imported?.import.id });
+    if (id) navigate(`/receitas/${id}`);
   }
 
   const showForm = mode === "manual" || imported !== null;
