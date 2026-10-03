@@ -16,6 +16,7 @@ import { healthRoutes } from "./routes/health.js";
 import { importRoutes, MAX_IMPORT_MB } from "./routes/imports.js";
 import { recipeRoutes } from "./routes/recipes.js";
 import { uploadRoutes } from "./routes/uploads.js";
+import { userRoutes } from "./routes/users.js";
 
 export function buildApp() {
   const app = Fastify({ logger: true });
@@ -76,6 +77,7 @@ export function buildApp() {
   app.register(importRoutes);
   app.register(feedRoutes);
   app.register(favoriteRoutes);
+  app.register(userRoutes);
 
   return app;
 }

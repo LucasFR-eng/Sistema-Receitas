@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "../auth/AuthContext.tsx";
+import { Avatar } from "./Avatar.tsx";
 
 const navItemClass =
   "whitespace-nowrap rounded-lg px-2 py-2 font-medium text-stone-700 transition hover:bg-stone-200 sm:px-3";
@@ -31,10 +32,17 @@ export function Header() {
               <Link to="/salvas" className={navItemClass}>
                 Salvas
               </Link>
-              <span className="hidden text-stone-600 md:inline">@{user.username}</span>
               <button type="button" onClick={handleLogout} className={navItemClass}>
                 Sair
               </button>
+              <Link
+                to={`/perfil/${user.username}`}
+                aria-label="Meu perfil"
+                title="Meu perfil"
+                className="ml-1 rounded-full transition hover:ring-2 hover:ring-brand-200 focus-visible:ring-2 focus-visible:ring-brand-500"
+              >
+                <Avatar name={user.name} avatarUrl={user.avatarUrl} size="sm" />
+              </Link>
             </>
           ) : (
             <>

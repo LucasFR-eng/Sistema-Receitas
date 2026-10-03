@@ -6,7 +6,13 @@ import { getUserId } from "../lib/auth.js";
 import { RECIPE_CATEGORIES } from "../lib/categories.js";
 import { publishFeedEvent } from "../lib/feed-events.js";
 import { prisma } from "../lib/prisma.js";
-import { isPublicRecipe, recipeInclude, recipeSummarySelect, withFavorites } from "../lib/recipe-queries.js";
+import {
+  findRecipePage,
+  isPublicRecipe,
+  recipeInclude,
+  recipeSummarySelect,
+  withFavorites,
+} from "../lib/recipe-queries.js";
 import { normalizeText } from "../lib/text.js";
 
 // Texto opcional: string vazia vira null
@@ -141,22 +147,7 @@ export async function recipeRoutes(app: FastifyInstance) {
       }),
     };
 
-    // Busca um item a mais só para saber se existe próxima página
-    const recipes = await prisma.recipe.findMany({
-      where,
-      select: recipeSummarySelect,
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      take: limit + 1,
-      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
-    });
-
-    const hasMore = recipes.length > limit;
-    const page = hasMore ? recipes.slice(0, limit) : recipes;
-
-    return {
-      recipes: await withFavorites(page, await getUserId(request)),
-      nextCursor: hasMore ? page[page.length - 1]!.id : null,
-    };
+    return findRecipePage(where, { cursor, limit, userId: await getUserId(request) });
   });
 
   // Todas as receitas do usuário logado (rascunhos e privadas incluídos)

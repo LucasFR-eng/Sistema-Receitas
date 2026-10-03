@@ -8,6 +8,15 @@ export interface User {
   createdAt: string;
 }
 
+// Perfil que qualquer pessoa pode ver (sem e-mail)
+export type PublicProfile = Omit<User, "email">;
+
+export interface ProfileResponse {
+  user: PublicProfile;
+  stats: { recipesCount: number; favoritesReceived: number };
+  isMe: boolean;
+}
+
 export type Difficulty = "EASY" | "MEDIUM" | "HARD";
 export type Visibility = "PUBLIC" | "PRIVATE";
 export type RecipeStatus = "DRAFT" | "PUBLISHED";

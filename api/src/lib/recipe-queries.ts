@@ -50,6 +50,29 @@ export const recipeSummarySelect = {
 export const isPublicRecipe = (recipe: { status: string; visibility: string }) =>
   recipe.status === "PUBLISHED" && recipe.visibility === "PUBLIC";
 
+// Lista paginada de receitas (mais novas primeiro), usada no feed e no perfil público
+export async function findRecipePage(
+  where: Prisma.RecipeWhereInput,
+  { cursor, limit, userId }: { cursor?: string; limit: number; userId: string | null },
+) {
+  // Busca um item a mais só para saber se existe próxima página
+  const recipes = await prisma.recipe.findMany({
+    where,
+    select: recipeSummarySelect,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: limit + 1,
+    ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+  });
+
+  const hasMore = recipes.length > limit;
+  const page = hasMore ? recipes.slice(0, limit) : recipes;
+
+  return {
+    recipes: await withFavorites(page, userId),
+    nextCursor: hasMore ? page[page.length - 1]!.id : null,
+  };
+}
+
 // Troca o "_count" do Prisma por favoritesCount e diz se o usuário logado salvou cada receita
 export async function withFavorites<T extends { id: string; _count: { favorites: number } }>(
   recipes: T[],

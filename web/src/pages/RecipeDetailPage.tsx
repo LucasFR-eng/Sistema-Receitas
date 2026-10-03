@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
+import { Avatar } from "../components/Avatar.tsx";
 import { FavoriteButton } from "../components/FavoriteButton.tsx";
 import { RecipeBadges } from "../components/RecipeBadges.tsx";
 import { PageLoading } from "../components/RequireAuth.tsx";
@@ -64,9 +65,13 @@ export function RecipeDetailPage() {
           {isOwner && <RecipeBadges status={recipe.status} visibility={recipe.visibility} />}
           {recipe.category && <p className="mt-2 text-sm font-medium text-brand-700">{recipe.category}</p>}
           <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">{recipe.name}</h1>
-          <p className="mt-2 text-stone-600">
-            por <span className="font-medium text-stone-800">{recipe.user.name}</span> · @{recipe.user.username}
-          </p>
+          <Link to={`/perfil/${recipe.user.username}`} className="group mt-3 flex w-fit items-center gap-2">
+            <Avatar name={recipe.user.name} avatarUrl={recipe.user.avatarUrl} size="sm" />
+            <span className="text-stone-600">
+              por <span className="font-medium text-stone-800 group-hover:underline">{recipe.user.name}</span> · @
+              {recipe.user.username}
+            </span>
+          </Link>
           {recipe.basedOn && (
             <p className="mt-1 text-sm text-stone-600">
               🔁 Baseada na receita{" "}
@@ -77,7 +82,10 @@ export function RecipeDetailPage() {
               ) : (
                 "original"
               )}{" "}
-              de @{recipe.basedOn.author.username}
+              de{" "}
+              <Link to={`/perfil/${recipe.basedOn.author.username}`} className="font-medium text-brand-700 hover:underline">
+                @{recipe.basedOn.author.username}
+              </Link>
             </p>
           )}
           {recipe.versionsCount > 0 && (
