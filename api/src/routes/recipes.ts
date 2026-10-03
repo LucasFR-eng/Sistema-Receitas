@@ -6,34 +6,8 @@ import { getUserId } from "../lib/auth.js";
 import { RECIPE_CATEGORIES } from "../lib/categories.js";
 import { publishFeedEvent } from "../lib/feed-events.js";
 import { prisma } from "../lib/prisma.js";
+import { isPublicRecipe, recipeInclude, recipeSummarySelect, withFavorites } from "../lib/recipe-queries.js";
 import { normalizeText } from "../lib/text.js";
-
-// Dados completos, usados na página da receita
-const recipeInclude = {
-  user: { select: { id: true, name: true, username: true, avatarUrl: true } },
-  ingredients: {
-    orderBy: { position: "asc" },
-    select: { id: true, quantity: true, unit: true, item: true },
-  },
-  steps: { orderBy: { position: "asc" }, select: { id: true, description: true } },
-} satisfies Prisma.RecipeInclude;
-
-// Dados resumidos, usados nos cards das listas
-const recipeSummarySelect = {
-  id: true,
-  name: true,
-  description: true,
-  photoUrl: true,
-  category: true,
-  prepMinutes: true,
-  servings: true,
-  difficulty: true,
-  visibility: true,
-  status: true,
-  createdAt: true,
-  updatedAt: true,
-  user: { select: { name: true, username: true, avatarUrl: true } },
-} satisfies Prisma.RecipeSelect;
 
 // Texto opcional: string vazia vira null
 const optionalText = (max: number) =>
@@ -136,13 +110,12 @@ function buildSteps(steps: RecipeInput["steps"]) {
 
 const notFound = { message: "Receita não encontrada" };
 
-const isPublicRecipe = (recipe: { status: string; visibility: string }) =>
-  recipe.status === "PUBLISHED" && recipe.visibility === "PUBLIC";
-
 // Avisa quem está com o feed aberto: receita nova no feed, alterada ou que saiu dele
 async function notifyFeed(id: string, wasPublic: boolean) {
-  const recipe = await prisma.recipe.findUnique({ where: { id }, select: recipeSummarySelect });
-  const nowPublic = recipe !== null && isPublicRecipe(recipe);
+  const found = await prisma.recipe.findUnique({ where: { id }, select: recipeSummarySelect });
+  const nowPublic = found !== null && isPublicRecipe(found);
+  // O aviso vai para todo mundo, então não diz se "você" salvou a receita
+  const recipe = found && (await withFavorites([found], null))[0];
 
   if (nowPublic && !wasPublic) publishFeedEvent({ type: "recipe:published", recipe });
   else if (nowPublic) publishFeedEvent({ type: "recipe:updated", recipe });
@@ -178,7 +151,10 @@ export async function recipeRoutes(app: FastifyInstance) {
     const hasMore = recipes.length > limit;
     const page = hasMore ? recipes.slice(0, limit) : recipes;
 
-    return { recipes: page, nextCursor: hasMore ? page[page.length - 1]!.id : null };
+    return {
+      recipes: await withFavorites(page, await getUserId(request)),
+      nextCursor: hasMore ? page[page.length - 1]!.id : null,
+    };
   });
 
   // Todas as receitas do usuário logado (rascunhos e privadas incluídos)
@@ -189,7 +165,7 @@ export async function recipeRoutes(app: FastifyInstance) {
       orderBy: { updatedAt: "desc" },
       take: 200,
     });
-    return { recipes };
+    return { recipes: await withFavorites(recipes, request.user.sub) };
   });
 
   app.get("/recipes/:id", async (request, reply) => {
@@ -203,13 +179,13 @@ export async function recipeRoutes(app: FastifyInstance) {
     });
 
     const isOwner = recipe?.userId === userId;
-    const isPublic = recipe?.status === "PUBLISHED" && recipe.visibility === "PUBLIC";
 
     // Receita privada ou rascunho de outra pessoa: responde como se não existisse
-    if (!recipe || (!isOwner && !isPublic)) return reply.status(404).send(notFound);
+    if (!recipe || (!isOwner && !isPublicRecipe(recipe))) return reply.status(404).send(notFound);
 
     // O texto original é material de trabalho do dono; não vai para quem só está vendo a receita
-    const { fingerprint: _, sourceText, ...publicRecipe } = recipe;
+    const [detailed] = await withFavorites([recipe], userId);
+    const { fingerprint: _, sourceText, ...publicRecipe } = detailed!;
     return { recipe: isOwner ? { ...publicRecipe, sourceText } : publicRecipe, isOwner };
   });
 

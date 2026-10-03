@@ -3,6 +3,7 @@ import { AuthProvider } from "./auth/AuthContext.tsx";
 import { Header } from "./components/Header.tsx";
 import { RequireAuth } from "./components/RequireAuth.tsx";
 import { EditRecipePage } from "./pages/EditRecipePage.tsx";
+import { FavoritesPage } from "./pages/FavoritesPage.tsx";
 import { HomePage } from "./pages/HomePage.tsx";
 import { LoginPage } from "./pages/LoginPage.tsx";
 import { MyRecipesPage } from "./pages/MyRecipesPage.tsx";
@@ -43,6 +44,14 @@ export default function App() {
               element={
                 <RequireAuth>
                   <MyRecipesPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/salvas"
+              element={
+                <RequireAuth>
+                  <FavoritesPage />
                 </RequireAuth>
               }
             />

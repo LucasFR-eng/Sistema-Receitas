@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
+import { FavoriteButton } from "../components/FavoriteButton.tsx";
 import { RecipeBadges } from "../components/RecipeBadges.tsx";
 import { PageLoading } from "../components/RequireAuth.tsx";
 import { useRecipe } from "../hooks/useRecipe.ts";
@@ -68,24 +69,32 @@ export function RecipeDetailPage() {
           </p>
         </div>
 
-        {isOwner && (
-          <div className="flex gap-2">
-            <Link
-              to={`/receitas/${recipe.id}/editar`}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm ring-1 ring-stone-300 transition hover:bg-stone-50"
-            >
-              Editar
-            </Link>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 disabled:opacity-60"
-            >
-              {deleting ? "Excluindo…" : "Excluir"}
-            </button>
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <FavoriteButton
+            variant="full"
+            recipeId={recipe.id}
+            isFavorited={recipe.isFavorited}
+            favoritesCount={recipe.favoritesCount}
+          />
+          {isOwner && (
+            <>
+              <Link
+                to={`/receitas/${recipe.id}/editar`}
+                className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm ring-1 ring-stone-300 transition hover:bg-stone-50"
+              >
+                Editar
+              </Link>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+              >
+                {deleting ? "Excluindo…" : "Excluir"}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {recipe.description && <p className="mt-4 text-lg text-stone-700">{recipe.description}</p>}

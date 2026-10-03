@@ -33,6 +33,9 @@ export interface RecipeSummary {
   createdAt: string;
   updatedAt: string;
   user: RecipeAuthor;
+  favoritesCount: number;
+  // Se o usuário logado salvou a receita (sempre false para quem não está logado)
+  isFavorited: boolean;
 }
 
 export interface Recipe extends Omit<RecipeSummary, "user"> {

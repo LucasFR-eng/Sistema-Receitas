@@ -82,8 +82,11 @@ export function RecipeFeed() {
     }
 
     if (event.type === "recipe:updated") {
+      // O aviso é o mesmo para todo mundo, então mantém o "salvo" de quem está vendo
       const replace = (list: RecipeSummary[]) =>
-        list.map((recipe) => (recipe.id === event.recipe.id ? event.recipe : recipe));
+        list.map((recipe) =>
+          recipe.id === event.recipe.id ? { ...event.recipe, isFavorited: recipe.isFavorited } : recipe,
+        );
       setRecipes(replace);
       setPending(replace);
       return;
