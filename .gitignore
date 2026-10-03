@@ -16,6 +16,9 @@ api/src/generated/
 # Uploads locais (fotos e PDFs enviados em desenvolvimento)
 api/uploads/
 
+# Arquivos de teste (receitas em PDF e foto para testar a importação com IA)
+testes/
+
 # Logs e sistema
 *.log
 npm-debug.log*

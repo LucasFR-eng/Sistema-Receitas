@@ -44,6 +44,28 @@ export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
   HARD: "Difícil",
 };
 
+// Quantidades que não são números e soam melhor depois do ingrediente ("sal a gosto")
+const VAGUE_QUANTITY = /^(a gosto|q\.?\s?b\.?|quanto baste|o quanto baste|opcional)$/i;
+
+// Monta o texto do ingrediente para exibir: a parte de quantidade/unidade (em destaque) e o resto.
+//   { quantity: "3", unit: "xícaras", item: "farinha" } -> "3 xícaras" + "de farinha"
+//   { quantity: "3", unit: null, item: "ovos" }         -> "3"         + "ovos"
+//   { quantity: "a gosto", unit: null, item: "sal" }    -> null        + "sal a gosto"
+export function formatIngredient(ingredient: { quantity: string | null; unit: string | null; item: string }) {
+  const quantity = ingredient.quantity?.trim() || null;
+  const unit = ingredient.unit?.trim() || null;
+  const item = ingredient.item.trim();
+
+  if (quantity && VAGUE_QUANTITY.test(quantity)) {
+    return { amount: null, rest: `${item} ${quantity}` };
+  }
+  if (unit) {
+    const needsDe = !/^de\s/i.test(item) && !/\sde$/i.test(unit);
+    return { amount: [quantity, unit].filter(Boolean).join(" "), rest: needsDe ? `de ${item}` : item };
+  }
+  return { amount: quantity, rest: item };
+}
+
 // 50 -> "50 min", 90 -> "1h30", 120 -> "2h"
 export function formatMinutes(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;

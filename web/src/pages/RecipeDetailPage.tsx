@@ -7,7 +7,7 @@ import { RecipeBadges } from "../components/RecipeBadges.tsx";
 import { PageLoading } from "../components/RequireAuth.tsx";
 import { useRecipe } from "../hooks/useRecipe.ts";
 import { api, ApiError } from "../lib/api.ts";
-import { DIFFICULTY_LABELS, formatMinutes, mediaUrl } from "../lib/recipes.ts";
+import { DIFFICULTY_LABELS, formatIngredient, formatMinutes, mediaUrl } from "../lib/recipes.ts";
 import { NotFoundPage } from "./NotFoundPage.tsx";
 
 export function RecipeDetailPage() {
@@ -164,12 +164,15 @@ export function RecipeDetailPage() {
                       className="mt-1 size-4 accent-brand-600"
                     />
                     <span className={checked.has(ingredient.id) ? "text-stone-400 line-through" : ""}>
-                      {[ingredient.quantity, ingredient.unit].filter(Boolean).length > 0 && (
-                        <span className="font-medium">
-                          {[ingredient.quantity, ingredient.unit].filter(Boolean).join(" ")}{" "}
-                        </span>
-                      )}
-                      {ingredient.item}
+                      {(() => {
+                        const { amount, rest } = formatIngredient(ingredient);
+                        return (
+                          <>
+                            {amount && <span className="font-medium">{amount} </span>}
+                            {rest}
+                          </>
+                        );
+                      })()}
                     </span>
                   </label>
                 </li>
