@@ -53,6 +53,7 @@ model User {
   recipes   Recipe[]
   imports   RecipeImport[]
   favorites Favorite[]
+  comments  Comment[]
 
   @@map("users")
 }
@@ -87,6 +88,7 @@ model Recipe {
   steps          Step[]
   imports        RecipeImport[]
   favorites      Favorite[]
+  comments       Comment[]
 
   @@index([userId])
   @@index([fingerprint])
@@ -146,6 +148,21 @@ model RecipeImport {
   @@index([fileHash])
   @@index([userId, createdAt])
   @@map("recipe_imports")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  recipeId  String   @map("recipe_id")
+  userId    String   @map("user_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Comentários de uma receita, dos mais novos para os mais antigos
+  @@index([recipeId, createdAt])
+  @@map("comments")
 }
 
 model Favorite {

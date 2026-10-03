@@ -190,7 +190,12 @@ export async function recipeRoutes(app: FastifyInstance) {
     // O texto original é material de trabalho do dono; não vai para quem só está vendo a receita
     const [detailed] = await withFavorites([rest], userId);
     const { fingerprint: _, sourceText, ...publicRecipe } = detailed!;
-    const response = { ...publicRecipe, basedOn, versionsCount: recipe._count.versions };
+    const response = {
+      ...publicRecipe,
+      basedOn,
+      versionsCount: recipe._count.versions,
+      commentsCount: recipe._count.comments,
+    };
     return { recipe: isOwner ? { ...response, sourceText } : response, isOwner };
   });
 

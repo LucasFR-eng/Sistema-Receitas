@@ -23,6 +23,7 @@ export const recipeInclude = {
   _count: {
     select: {
       favorites: true,
+      comments: true,
       // Conta só as versões que qualquer pessoa pode ver
       versions: { where: { status: "PUBLISHED", visibility: "PUBLIC" } },
     },
@@ -49,6 +50,16 @@ export const recipeSummarySelect = {
 
 export const isPublicRecipe = (recipe: { status: string; visibility: string }) =>
   recipe.status === "PUBLISHED" && recipe.visibility === "PUBLIC";
+
+// Busca uma receita só se quem está pedindo pode vê-la (pública, ou dele mesmo)
+export async function findVisibleRecipe(recipeId: string, viewerId: string | null) {
+  const recipe = await prisma.recipe.findUnique({
+    where: { id: recipeId },
+    select: { id: true, userId: true, status: true, visibility: true },
+  });
+  if (!recipe || (recipe.userId !== viewerId && !isPublicRecipe(recipe))) return null;
+  return recipe;
+}
 
 // Lista paginada de receitas (mais novas primeiro), usada no feed e no perfil público
 export async function findRecipePage(

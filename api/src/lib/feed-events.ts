@@ -6,6 +6,9 @@ export type FeedEvent =
   | { type: "recipe:updated"; recipe: unknown }
   | { type: "recipe:removed"; id: string };
 
+// Avisos de uma receita específica, para quem está com a página dela aberta
+export type RecipeEvent = { type: "comment:created"; comment: unknown } | { type: "comment:deleted"; id: string };
+
 // Central de avisos em memória. Funciona com um único servidor da API;
 // se um dia rodarem várias cópias da API, troque por um pub/sub compartilhado (ex: Redis).
 const emitter = new EventEmitter();
@@ -13,10 +16,19 @@ const emitter = new EventEmitter();
 emitter.setMaxListeners(0);
 
 export function publishFeedEvent(event: FeedEvent) {
-  emitter.emit("event", event);
+  emitter.emit("feed", event);
 }
 
 export function subscribeToFeed(listener: (event: FeedEvent) => void): () => void {
-  emitter.on("event", listener);
-  return () => emitter.off("event", listener);
+  emitter.on("feed", listener);
+  return () => emitter.off("feed", listener);
+}
+
+export function publishRecipeEvent(recipeId: string, event: RecipeEvent) {
+  emitter.emit(`recipe:${recipeId}`, event);
+}
+
+export function subscribeToRecipe(recipeId: string, listener: (event: RecipeEvent) => void): () => void {
+  emitter.on(`recipe:${recipeId}`, listener);
+  return () => emitter.off(`recipe:${recipeId}`, listener);
 }

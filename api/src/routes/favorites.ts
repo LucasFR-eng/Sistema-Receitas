@@ -1,30 +1,19 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
-import { isPublicRecipe, recipeSummarySelect, withFavorites } from "../lib/recipe-queries.js";
+import { findVisibleRecipe, recipeSummarySelect, withFavorites } from "../lib/recipe-queries.js";
 
 const idParamsSchema = z.object({ id: z.uuid() });
 const notFound = { message: "Receita não encontrada" };
 
 export async function favoriteRoutes(app: FastifyInstance) {
-  // Busca a receita e confere se o usuário pode vê-la (pública, ou dele mesmo)
-  async function findVisibleRecipe(params: unknown, userId: string) {
-    const parsed = idParamsSchema.safeParse(params);
-    if (!parsed.success) return null;
-    const recipe = await prisma.recipe.findUnique({
-      where: { id: parsed.data.id },
-      select: { id: true, userId: true, status: true, visibility: true },
-    });
-    if (!recipe || (recipe.userId !== userId && !isPublicRecipe(recipe))) return null;
-    return recipe;
-  }
-
   const countFavorites = (recipeId: string) => prisma.favorite.count({ where: { recipeId } });
 
   // Salvar receita (chamar duas vezes não duplica)
   app.post("/recipes/:id/favorite", { onRequest: [app.authenticate] }, async (request, reply) => {
     const userId = request.user.sub;
-    const recipe = await findVisibleRecipe(request.params, userId);
+    const params = idParamsSchema.safeParse(request.params);
+    const recipe = params.success ? await findVisibleRecipe(params.data.id, userId) : null;
     if (!recipe) return reply.status(404).send(notFound);
 
     await prisma.favorite.upsert({

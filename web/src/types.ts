@@ -53,11 +53,19 @@ export interface Recipe extends Omit<RecipeSummary, "user"> {
   basedOn: { author: { name: string; username: string }; id?: string; name?: string } | null;
   // Quantas versões públicas outras pessoas fizeram desta receita
   versionsCount: number;
+  commentsCount: number;
   // Só vem para o dono da receita
   sourceText?: string | null;
   user: RecipeAuthor & { id: string };
   ingredients: { id: string; quantity: string | null; unit: string | null; item: string }[];
   steps: { id: string; description: string }[];
+}
+
+export interface Comment {
+  id: string;
+  content: string;
+  createdAt: string;
+  user: RecipeAuthor;
 }
 
 // Receita lida pela IA, ainda não salva (o usuário revisa no formulário)

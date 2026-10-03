@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Avatar } from "../components/Avatar.tsx";
+import { CommentsSection } from "../components/CommentsSection.tsx";
 import { FavoriteButton } from "../components/FavoriteButton.tsx";
 import { RecipeBadges } from "../components/RecipeBadges.tsx";
 import { PageLoading } from "../components/RequireAuth.tsx";
@@ -202,6 +203,8 @@ export function RecipeDetailPage() {
           <p className="mt-3 whitespace-pre-line text-stone-700">{recipe.freeText}</p>
         </section>
       )}
+
+      <CommentsSection recipeId={recipe.id} initialCount={recipe.commentsCount} isRecipeOwner={isOwner} />
     </main>
   );
 }
