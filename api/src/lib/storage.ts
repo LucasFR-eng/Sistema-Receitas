@@ -6,10 +6,11 @@ import path from "node:path";
 import { env } from "../env.js";
 
 // Dois "motores" de armazenamento:
-// - Vercel Blob, quando BLOB_READ_WRITE_TOKEN está configurado (produção na Vercel, que não tem disco)
+// - Vercel Blob, quando o projeto está conectado a um Blob store (produção na Vercel, que não tem disco).
+//   A biblioteca @vercel/blob se autentica sozinha com BLOB_STORE_ID + OIDC, ou com BLOB_READ_WRITE_TOKEN
 // - pasta local (desenvolvimento), servida pela própria API em /api/uploads
 //   (o banco guarda "/uploads/arquivo.jpg"; o front acrescenta o "/api")
-export const useBlobStorage = Boolean(env.BLOB_READ_WRITE_TOKEN);
+export const useBlobStorage = Boolean(env.BLOB_STORE_ID || env.BLOB_READ_WRITE_TOKEN);
 
 export const UPLOAD_ROOT = path.resolve(env.UPLOAD_DIR);
 export const UPLOAD_URL_PREFIX = "/uploads/";

@@ -15,7 +15,7 @@ Serviços gratuitos ligados ao projeto pelo painel da Vercel:
 | Serviço | Para quê | Variável que cria |
 |---|---|---|
 | **Neon** (Postgres) | Banco de dados | `DATABASE_URL`, `DATABASE_URL_UNPOOLED` |
-| **Vercel Blob** | Fotos e PDFs | `BLOB_READ_WRITE_TOKEN` |
+| **Vercel Blob** (acesso **Public**) | Fotos e PDFs | `BLOB_STORE_ID` (autenticação automática OIDC) |
 | **Upstash** (Redis) | Avisos em tempo real entre as cópias da API | `REDIS_URL` (ou `KV_URL`) |
 
 > O plano gratuito (Hobby) da Vercel **não permite uso comercial**. Quando começar a cobrar, migre para o plano Pro ou outra hospedagem.
@@ -39,7 +39,7 @@ Serviços gratuitos ligados ao projeto pelo painel da Vercel:
 No projeto, aba **Storage** (ou **Integrations / Marketplace**):
 
 1. **Neon** (Postgres) → plano **Free** → conecte ao projeto `recipelens`
-2. **Blob** → crie um store → conecte ao projeto
+2. **Blob** → crie um store com acesso **Public** (as fotos precisam abrir para qualquer visitante) → conecte ao projeto
 3. **Upstash for Redis** → plano **Free** → conecte ao projeto
 
 Cada integração cria as variáveis sozinha.
