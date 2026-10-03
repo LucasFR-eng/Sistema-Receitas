@@ -1,4 +1,4 @@
-// Modelo do banco de dados do RecipeLens.
+// Modelo do banco de dados do Receita+.
 // Depois de alterar este arquivo, rode: npm run db:migrate
 
 generator client {

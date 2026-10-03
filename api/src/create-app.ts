@@ -1,7 +1,6 @@
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
-import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyError } from "fastify";
 import { z, ZodError } from "zod";
 import { env } from "./env.js";
@@ -77,8 +76,13 @@ export function buildApp() {
   app.register(
     async (api) => {
       // No modo local, serve as imagens enviadas em /api/uploads/nome-do-arquivo.jpg
-      // (no Vercel Blob, as imagens já têm um endereço público próprio)
-      if (!useBlobStorage) api.register(fastifyStatic, { root: UPLOAD_ROOT, prefix: UPLOAD_URL_PREFIX });
+      // (no Vercel Blob, as imagens já têm um endereço público próprio).
+      // Carregado só aqui, com import(): o @fastify/static usa uma dependência em formato ESM
+      // que quebra a API na Vercel se o plugin for carregado, mesmo sem ser usado.
+      if (!useBlobStorage) {
+        const { default: fastifyStatic } = await import("@fastify/static");
+        api.register(fastifyStatic, { root: UPLOAD_ROOT, prefix: UPLOAD_URL_PREFIX });
+      }
 
       api.register(healthRoutes);
       api.register(authRoutes);

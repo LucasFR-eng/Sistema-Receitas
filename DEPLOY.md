@@ -1,6 +1,6 @@
 # Deploy na Vercel (gratuito)
 
-O RecipeLens vira **um único projeto na Vercel** usando o recurso **Services**:
+O Receita+ vira **um único projeto na Vercel** usando o recurso **Services**:
 
 | Serviço | Pasta | Endereço |
 |---|---|---|
@@ -49,8 +49,9 @@ Cada integração cria as variáveis sozinha.
 Aba **Deployments** → no último deploy, **Redeploy**. O build da API roda `prisma migrate deploy`
 e cria as tabelas no Neon.
 
-Teste: `https://recipelens.vercel.app/api/health` deve mostrar `{"status":"ok","database":"ok"}`.
-Depois abra `https://recipelens.vercel.app`.
+Teste: `https://SEU-DOMINIO.vercel.app/api/health` deve mostrar `{"status":"ok","database":"ok"}`
+(o domínio aparece em **Domains** no painel; se o nome já existir, a Vercel acrescenta um sufixo).
+Depois abra `https://SEU-DOMINIO.vercel.app`.
 
 ## Atualizações
 

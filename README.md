@@ -1,4 +1,4 @@
-# RecipeLens
+# Receita+
 
 Fotografe uma receita (ou envie um PDF) e a IA escreve para você. Organize suas receitas, deixe-as públicas ou privadas e descubra as de outras pessoas em tempo real.
 

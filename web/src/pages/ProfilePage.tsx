@@ -78,7 +78,7 @@ export function ProfilePage() {
           <p className="text-stone-500">@{user.username}</p>
           {user.bio && <p className="mt-3 whitespace-pre-line text-stone-700">{user.bio}</p>}
           <p className="mt-3 text-sm text-stone-500">
-            No RecipeLens desde {joinedFormat.format(new Date(user.createdAt))}
+            No Receita+ desde {joinedFormat.format(new Date(user.createdAt))}
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:items-end">

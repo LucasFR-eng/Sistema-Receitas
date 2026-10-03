@@ -17,7 +17,7 @@ export function Header() {
   return (
     <header className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-5">
       <Link to="/" className="text-xl font-bold tracking-tight">
-        Recipe<span className="text-brand-600">Lens</span>
+        Receita<span className="text-brand-600">+</span>
       </Link>
 
       {!loading && (
