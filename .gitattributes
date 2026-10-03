@@ -1,0 +1,2 @@
+# Mantém quebras de linha no padrão Linux (LF), evitando erros dentro dos containers
+* text=auto eol=lf

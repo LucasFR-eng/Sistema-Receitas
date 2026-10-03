@@ -1,0 +1,154 @@
+// Modelo do banco de dados do RecipeLens.
+// Depois de alterar este arquivo, rode: npm run db:migrate
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum RecipeStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum ImportType {
+  IMAGE
+  PDF
+}
+
+enum ImportStatus {
+  PROCESSING
+  DONE
+  FAILED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  username     String   @unique
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  avatarUrl    String?  @map("avatar_url")
+  bio          String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  recipes   Recipe[]
+  imports   RecipeImport[]
+  favorites Favorite[]
+
+  @@map("users")
+}
+
+model Recipe {
+  id          String       @id @default(uuid())
+  userId      String       @map("user_id")
+  name        String
+  description String?
+  photoUrl    String?      @map("photo_url")
+  category    String?
+  prepMinutes Int?         @map("prep_minutes")
+  servings    Int?
+  difficulty  Difficulty?
+  visibility  Visibility   @default(PUBLIC)
+  status      RecipeStatus @default(DRAFT)
+  // Texto livre editável pelo usuário (inclui o que a IA extraiu do arquivo)
+  freeText    String?      @map("free_text")
+  // Hash do nome + ingredientes normalizados, para detectar duplicatas exatas
+  fingerprint String?
+  // Preenchido quando a receita é "minha versão" de outra (dá o crédito)
+  originalRecipeId String? @map("original_recipe_id")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  originalRecipe Recipe?      @relation("RecipeVersions", fields: [originalRecipeId], references: [id], onDelete: SetNull)
+  versions       Recipe[]     @relation("RecipeVersions")
+  ingredients    Ingredient[]
+  steps          Step[]
+  imports        RecipeImport[]
+  favorites      Favorite[]
+
+  @@index([userId])
+  @@index([fingerprint])
+  @@index([visibility, status, createdAt])
+  @@map("recipes")
+}
+
+model Ingredient {
+  id             String  @id @default(uuid())
+  recipeId       String  @map("recipe_id")
+  quantity       String?
+  unit           String?
+  item           String
+  // Item sem acento e em minúsculas, usado em buscas e na detecção de duplicatas
+  itemNormalized String  @map("item_normalized")
+  position       Int
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId])
+  @@index([itemNormalized])
+  @@map("ingredients")
+}
+
+model Step {
+  id          String @id @default(uuid())
+  recipeId    String @map("recipe_id")
+  description String
+  position    Int
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId])
+  @@map("steps")
+}
+
+model RecipeImport {
+  id        String       @id @default(uuid())
+  userId    String       @map("user_id")
+  fileUrl   String       @map("file_url")
+  // SHA-256 do arquivo: evita importar o mesmo arquivo duas vezes e reaproveita o resultado da IA
+  fileHash  String       @map("file_hash")
+  type      ImportType
+  status    ImportStatus @default(PROCESSING)
+  aiResult  Json?        @map("ai_result")
+  aiWarnings Json?       @map("ai_warnings")
+  error     String?
+  recipeId  String?      @map("recipe_id")
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe Recipe? @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+
+  @@index([fileHash])
+  @@index([userId, createdAt])
+  @@map("recipe_imports")
+}
+
+model Favorite {
+  userId    String   @map("user_id")
+  recipeId  String   @map("recipe_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@id([userId, recipeId])
+  @@map("favorites")
+}

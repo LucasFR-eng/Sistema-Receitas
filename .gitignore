@@ -1,0 +1,28 @@
+# Dependências
+node_modules/
+
+# Builds
+dist/
+build/
+
+# Variáveis de ambiente (nunca subir chaves para o Git)
+.env
+.env.*
+!.env.example
+
+# Prisma (cliente gerado)
+api/src/generated/
+
+# Uploads locais (fotos e PDFs enviados em desenvolvimento)
+api/uploads/
+
+# Logs e sistema
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/*
+!.vscode/extensions.json
+.idea/
