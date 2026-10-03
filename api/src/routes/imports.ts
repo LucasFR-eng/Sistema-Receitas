@@ -48,7 +48,7 @@ function toDraft(result: ExtractedRecipe) {
     prepMinutes: clampNumber(result.prepMinutes, 10_000),
     servings: clampNumber(result.servings, 1_000),
     difficulty: result.difficulty,
-    freeText: clampText(result.rawText, 20_000),
+    sourceText: clampText(result.rawText, 20_000),
     ingredients: result.ingredients
       .filter((ingredient) => ingredient.item.trim())
       .slice(0, 100)

@@ -37,6 +37,8 @@ export interface RecipeSummary {
 
 export interface Recipe extends Omit<RecipeSummary, "user"> {
   freeText: string | null;
+  // Só vem para o dono da receita
+  sourceText?: string | null;
   user: RecipeAuthor & { id: string };
   ingredients: { id: string; quantity: string | null; unit: string | null; item: string }[];
   steps: { id: string; description: string }[];
@@ -50,7 +52,7 @@ export interface RecipeDraft {
   prepMinutes: number | null;
   servings: number | null;
   difficulty: Difficulty | null;
-  freeText: string | null;
+  sourceText: string | null;
   ingredients: { quantity: string | null; unit: string | null; item: string }[];
   steps: string[];
 }
@@ -80,6 +82,7 @@ export interface RecipeInput {
   visibility: Visibility;
   status: RecipeStatus;
   freeText: string | null;
+  sourceText: string | null;
   ingredients: { quantity: string | null; unit: string | null; item: string }[];
   steps: string[];
   allowDuplicate?: boolean;

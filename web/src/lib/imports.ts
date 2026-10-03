@@ -21,6 +21,7 @@ export function getImportUsage() {
 export function draftToFormValues(draft: RecipeDraft): RecipeFormValues {
   return {
     ...draft,
+    freeText: null,
     steps: draft.steps.map((description) => ({ description })),
   };
 }

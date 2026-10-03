@@ -75,6 +75,7 @@ const recipeInputSchema = z
     visibility: z.enum(["PUBLIC", "PRIVATE"]),
     status: z.enum(["DRAFT", "PUBLISHED"]),
     freeText: optionalText(20_000),
+    sourceText: optionalText(20_000),
     ingredients: z
       .array(
         z.object({
@@ -193,8 +194,9 @@ export async function recipeRoutes(app: FastifyInstance) {
     // Receita privada ou rascunho de outra pessoa: responde como se não existisse
     if (!recipe || (!isOwner && !isPublic)) return reply.status(404).send(notFound);
 
-    const { fingerprint: _, ...publicRecipe } = recipe;
-    return { recipe: publicRecipe, isOwner };
+    // O texto original é material de trabalho do dono; não vai para quem só está vendo a receita
+    const { fingerprint: _, sourceText, ...publicRecipe } = recipe;
+    return { recipe: isOwner ? { ...publicRecipe, sourceText } : publicRecipe, isOwner };
   });
 
   app.post("/recipes", { onRequest: [app.authenticate] }, async (request, reply) => {

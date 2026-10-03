@@ -69,8 +69,10 @@ model Recipe {
   difficulty  Difficulty?
   visibility  Visibility   @default(PUBLIC)
   status      RecipeStatus @default(DRAFT)
-  // Texto livre editável pelo usuário (inclui o que a IA extraiu do arquivo)
+  // Anotações do usuário (dicas, variações); aparecem na página da receita
   freeText    String?      @map("free_text")
+  // Texto original lido pela IA (ou colado pelo usuário); só aparece no formulário, para revisar e reorganizar
+  sourceText  String?      @map("source_text")
   // Hash do nome + ingredientes normalizados, para detectar duplicatas exatas
   fingerprint String?
   // Preenchido quando a receita é "minha versão" de outra (dá o crédito)

@@ -76,14 +76,17 @@ export class GeminiProvider implements AIProvider {
         }
       }
 
-      // 429 = cota do plano gratuito esgotada (por minuto ou por dia); trocar de modelo não ajuda
-      if (lastError instanceof ApiError && lastError.status === 429) {
-        throw new AIError("A IA atingiu o limite de uso. Tente novamente em alguns minutos.", "RATE_LIMITED", {
-          cause: lastError,
-        });
-      }
+      // Erro que não é de disponibilidade nem de cota (ex: requisição inválida): outro modelo não resolve
+      if (!(lastError instanceof ApiError) || ![429, 500, 503, 404].includes(lastError.status)) break;
+      // 429 (cota esgotada) e 404 (modelo descontinuado) seguem para o próximo modelo:
+      // no plano gratuito a cota diária é separada para cada modelo
     }
 
+    if (lastError instanceof ApiError && lastError.status === 429) {
+      throw new AIError("A IA atingiu o limite de uso. Tente novamente mais tarde.", "RATE_LIMITED", {
+        cause: lastError,
+      });
+    }
     throw new AIError("A IA está indisponível no momento. Tente novamente.", "UNAVAILABLE", { cause: lastError });
   }
 }

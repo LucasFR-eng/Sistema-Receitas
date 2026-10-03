@@ -30,6 +30,7 @@ interface FormState {
   difficulty: Difficulty | "";
   visibility: Visibility;
   freeText: string;
+  sourceText: string;
   ingredients: IngredientRow[];
   steps: StepRow[];
 }
@@ -45,6 +46,7 @@ export interface RecipeFormValues {
   difficulty: Difficulty | null;
   visibility?: Visibility;
   freeText: string | null;
+  sourceText?: string | null;
   ingredients: { id?: string; quantity: string | null; unit: string | null; item: string }[];
   steps: { id?: string; description: string }[];
 }
@@ -65,6 +67,7 @@ function toFormState(recipe?: RecipeFormValues): FormState {
       difficulty: "",
       visibility: "PUBLIC",
       freeText: "",
+      sourceText: "",
       ingredients: [emptyIngredient(), emptyIngredient(), emptyIngredient()],
       steps: [emptyStep(), emptyStep()],
     };
@@ -80,6 +83,7 @@ function toFormState(recipe?: RecipeFormValues): FormState {
     difficulty: recipe.difficulty ?? "",
     visibility: recipe.visibility ?? "PUBLIC",
     freeText: recipe.freeText ?? "",
+    sourceText: recipe.sourceText ?? "",
     ingredients: recipe.ingredients.length
       ? recipe.ingredients.map((ingredient) => ({
           key: ingredient.id ?? newKey(),
@@ -109,6 +113,7 @@ function toInput(form: FormState, status: RecipeStatus): RecipeInput {
     visibility: form.visibility,
     status,
     freeText: toText(form.freeText),
+    sourceText: toText(form.sourceText),
     // Linhas deixadas em branco são ignoradas
     ingredients: form.ingredients
       .filter((row) => row.item.trim())
@@ -195,21 +200,22 @@ export function RecipeForm({ initialValues, onSave, onReorganize }: RecipeFormPr
     }
 
     setReorganizing(true);
-    setFieldErrors((current) => ({ ...current, freeText: undefined }));
+    setFieldErrors((current) => ({ ...current, sourceText: undefined }));
     try {
-      const values = await onReorganize(form.freeText);
+      const values = await onReorganize(form.sourceText);
       const next = toFormState(values);
-      // Mantém o que a IA não mexe: foto, visibilidade e o texto que o usuário escreveu
+      // Mantém o que a IA não mexe: foto, visibilidade, anotações e o próprio texto original
       setForm((current) => ({
         ...next,
         name: next.name || current.name,
         photoUrl: current.photoUrl,
         visibility: current.visibility,
         freeText: current.freeText,
+        sourceText: current.sourceText,
       }));
     } catch (err) {
       const message = err instanceof ApiError ? (err.fieldErrors.text?.[0] ?? err.message) : "Não foi possível reorganizar";
-      setFieldErrors((current) => ({ ...current, freeText: [message] }));
+      setFieldErrors((current) => ({ ...current, sourceText: [message] }));
     } finally {
       setReorganizing(false);
     }
@@ -456,25 +462,37 @@ export function RecipeForm({ initialValues, onSave, onReorganize }: RecipeFormPr
 
       <Section title="Anotações">
         <TextArea
-          label="Texto livre (opcional)"
+          label="Dicas e observações (opcional)"
           value={form.freeText}
           onChange={(value) => update("freeText", value)}
           error={fieldErrors.freeText?.[0]}
-          rows={6}
-          placeholder="Dicas, variações, a história da receita… ou cole o texto de uma receita e clique em Reorganizar com IA."
-          hint="O texto lido pela IA aparece aqui. Corrija o que ela não entendeu e clique em Reorganizar com IA para atualizar os campos."
+          rows={3}
+          placeholder="Dicas, variações, a história da receita…"
+          hint="Aparece na página da receita."
         />
-        {onReorganize && (
+      </Section>
+
+      {onReorganize && (
+        <Section title="Texto original">
+          <TextArea
+            label="Texto da receita (opcional)"
+            value={form.sourceText}
+            onChange={(value) => update("sourceText", value)}
+            error={fieldErrors.sourceText?.[0]}
+            rows={8}
+            placeholder="Cole aqui o texto de uma receita e clique em Reorganizar com IA para preencher os campos acima."
+            hint="Aqui fica o texto lido pela IA. Corrija o que ela não entendeu e clique em Reorganizar. Só você vê este campo."
+          />
           <button
             type="button"
             onClick={reorganize}
-            disabled={busy || form.freeText.trim().length < MIN_REORGANIZE_LENGTH}
+            disabled={busy || form.sourceText.trim().length < MIN_REORGANIZE_LENGTH}
             className="rounded-lg bg-brand-50 px-4 py-2 text-sm font-medium text-brand-700 ring-1 ring-brand-200 transition hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {reorganizing ? "Reorganizando… pode levar até 1 minuto" : "✨ Reorganizar com IA"}
           </button>
-        )}
-      </Section>
+        </Section>
+      )}
 
       <Section title="Quem pode ver">
         <div className="grid gap-2 sm:grid-cols-2">
