@@ -44,8 +44,9 @@ const loginSchema = z.object({
 const authRateLimit = { rateLimit: { max: 10, timeWindow: "1 minute" } };
 
 // Hash usado quando o usuário não existe, para o login levar o mesmo tempo
-// nos dois casos e não revelar quais e-mails estão cadastrados
-const dummyPasswordHash = await hashPassword("senha-inexistente");
+// nos dois casos e não revelar quais e-mails estão cadastrados.
+// Começa a calcular já, mas só espera o resultado no primeiro login (sem "await" no topo do arquivo)
+const dummyPasswordHash = hashPassword("senha-inexistente");
 
 export async function authRoutes(app: FastifyInstance) {
   app.post("/auth/register", { config: authRateLimit }, async (request, reply) => {
@@ -87,7 +88,7 @@ export async function authRoutes(app: FastifyInstance) {
       select: { ...publicUserSelect, passwordHash: true },
     });
 
-    const valid = await verifyPassword(password, user?.passwordHash ?? dummyPasswordHash);
+    const valid = await verifyPassword(password, user?.passwordHash ?? (await dummyPasswordHash));
 
     if (!user || !valid) {
       return reply.status(401).send({ message: "E-mail, usuário ou senha incorretos" });
