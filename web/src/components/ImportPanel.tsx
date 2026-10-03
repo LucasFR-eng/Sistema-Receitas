@@ -1,0 +1,139 @@
+import { useEffect, useState, type DragEvent } from "react";
+import { ApiError } from "../lib/api.ts";
+import { getImportUsage, IMPORT_ACCEPT, importFromFile, MAX_IMPORT_MB } from "../lib/imports.ts";
+import type { ImportResponse, ImportUsage } from "../types.ts";
+
+// Mensagens que vão mudando enquanto a IA trabalha, para a espera não parecer travada
+function readingMessage(seconds: number) {
+  if (seconds < 8) return "Enviando e lendo sua receita…";
+  if (seconds < 20) return "Organizando ingredientes e modo de preparo…";
+  if (seconds < 40) return "Conferindo se falta alguma coisa…";
+  return "A IA está mais lenta agora, mas já está quase lá…";
+}
+
+export function ImportPanel({ onImported }: { onImported: (response: ImportResponse) => void }) {
+  const [usage, setUsage] = useState<ImportUsage | null>(null);
+  const [reading, setReading] = useState(false);
+  const [seconds, setSeconds] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [errorWarnings, setErrorWarnings] = useState<string[]>([]);
+
+  useEffect(() => {
+    getImportUsage()
+      .then(setUsage)
+      .catch(() => setUsage(null));
+  }, []);
+
+  useEffect(() => {
+    if (!reading) return;
+    setSeconds(0);
+    const timer = setInterval(() => setSeconds((current) => current + 1), 1000);
+    return () => clearInterval(timer);
+  }, [reading]);
+
+  async function handleFile(file: File | undefined) {
+    if (!file || reading) return;
+    setError(null);
+    setErrorWarnings([]);
+
+    if (!IMPORT_ACCEPT.split(",").includes(file.type)) {
+      setError("Envie uma foto (JPG, PNG ou WEBP) ou um PDF.");
+      return;
+    }
+    if (file.size > MAX_IMPORT_MB * 1024 * 1024) {
+      setError(`O arquivo pode ter no máximo ${MAX_IMPORT_MB} MB.`);
+      return;
+    }
+
+    setReading(true);
+    try {
+      onImported(await importFromFile(file));
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+        if (Array.isArray(err.data.warnings)) setErrorWarnings(err.data.warnings as string[]);
+        if (err.data.usage) setUsage(err.data.usage as ImportUsage);
+      } else {
+        setError("Algo deu errado. Tente novamente.");
+      }
+    } finally {
+      setReading(false);
+    }
+  }
+
+  function handleDrop(event: DragEvent) {
+    event.preventDefault();
+    setDragging(false);
+    handleFile(event.dataTransfer.files[0]);
+  }
+
+  const noCredits = usage?.remaining === 0;
+
+  return (
+    <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-200 sm:p-6">
+      {reading ? (
+        <div role="status" className="flex flex-col items-center px-4 py-14 text-center">
+          <span className="size-10 animate-spin rounded-full border-4 border-brand-100 border-t-brand-600" />
+          <p className="mt-5 font-medium">{readingMessage(seconds)}</p>
+          <p className="mt-1 text-sm text-stone-500">{seconds}s · normalmente leva menos de 1 minuto</p>
+        </div>
+      ) : (
+        <label
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={handleDrop}
+          className={`flex cursor-pointer flex-col items-center rounded-xl border-2 border-dashed px-4 py-12 text-center transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-500 ${
+            noCredits ? "pointer-events-none opacity-50" : ""
+          } ${dragging ? "border-brand-500 bg-brand-50" : "border-stone-300 hover:border-brand-400 hover:bg-stone-50"}`}
+        >
+          <span className="text-4xl" aria-hidden>
+            📸
+          </span>
+          <span className="mt-3 text-lg font-semibold">Envie a foto ou o PDF da receita</span>
+          <span className="mt-1 text-sm text-stone-600">
+            Pode ser de livro, impressa ou escrita à mão. A IA lê e preenche tudo para você.
+          </span>
+          <span className="mt-4 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm">
+            Escolher arquivo
+          </span>
+          <span className="mt-2 text-xs text-stone-500">ou arraste aqui · JPG, PNG, WEBP ou PDF até {MAX_IMPORT_MB} MB</span>
+          <input
+            type="file"
+            accept={IMPORT_ACCEPT}
+            disabled={noCredits}
+            onChange={(event) => {
+              handleFile(event.target.files?.[0]);
+              event.target.value = "";
+            }}
+            className="sr-only"
+          />
+        </label>
+      )}
+
+      {error && (
+        <div role="alert" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-200">
+          <p>{error}</p>
+          {errorWarnings.length > 0 && (
+            <ul className="mt-1 list-disc pl-5">
+              {errorWarnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {usage && (
+        <p className="mt-4 text-center text-sm text-stone-500">
+          {noCredits
+            ? "Você usou todas as leituras com IA deste mês. O limite renova no dia 1º."
+            : `Você tem ${usage.remaining} de ${usage.limit} leituras com IA este mês.`}
+        </p>
+      )}
+    </div>
+  );
+}

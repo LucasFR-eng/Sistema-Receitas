@@ -47,10 +47,15 @@ export function api<T>(path: string, { method = "GET", body }: RequestOptions = 
   });
 }
 
-// Envia uma imagem e devolve o caminho onde ela ficou salva
-export async function uploadImage(file: File): Promise<string> {
+// Envia um arquivo no campo "file" (multipart/form-data)
+export function postFile<T>(path: string, file: File): Promise<T> {
   const form = new FormData();
   form.append("file", file);
-  const data = await request<{ url: string }>("/uploads/images", { method: "POST", body: form });
+  return request<T>(path, { method: "POST", body: form });
+}
+
+// Envia uma imagem e devolve o caminho onde ela ficou salva
+export async function uploadImage(file: File): Promise<string> {
+  const data = await postFile<{ url: string }>("/uploads/images", file);
   return data.url;
 }

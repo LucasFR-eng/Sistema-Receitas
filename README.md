@@ -64,6 +64,16 @@ npm run dev
 
 Acesse http://localhost:5173.
 
+## Importação com IA
+
+Em **Nova receita → Importar com IA**, o usuário envia uma foto ou PDF e o Gemini preenche o formulário, listando o que precisa ser revisado. O texto lido vai para "Anotações", onde dá para corrigir e clicar em **Reorganizar com IA**.
+
+- Configure `GEMINI_API_KEY` no `api/.env` (gere em https://aistudio.google.com/apikey)
+- `GEMINI_MODEL` é o modelo principal; `GEMINI_FALLBACK_MODELS` são usados se ele estiver sobrecarregado
+- `IMPORT_MONTHLY_LIMIT` limita as leituras por usuário por mês
+- Arquivo ou texto idêntico a um já lido reaproveita o resultado, sem chamar a IA e sem contar no limite
+- Erros da IA ficam salvos na coluna `error` da tabela `recipe_imports` (veja com `npm --prefix api run db:studio`)
+
 ## Comandos úteis
 
 | Comando (dentro de `api/`) | O que faz |

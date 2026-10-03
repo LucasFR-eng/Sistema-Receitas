@@ -22,6 +22,10 @@ export async function uploadRoutes(app: FastifyInstance) {
         throw error;
       }
 
+      if (data.length > MAX_IMAGE_MB * 1024 * 1024) {
+        return reply.status(413).send({ message: `A imagem pode ter no máximo ${MAX_IMAGE_MB} MB` });
+      }
+
       const extension = detectImageType(data);
       if (!extension) {
         return reply.status(415).send({ message: "Envie uma imagem JPG, PNG ou WEBP" });

@@ -89,6 +89,8 @@ const recipeInputSchema = z
       .max(100, "Máximo de 100 passos"),
     // true quando o usuário confirmou que quer salvar mesmo havendo uma receita igual
     allowDuplicate: z.boolean().optional(),
+    // Importação com IA que originou a receita (para histórico)
+    importId: z.uuid().optional(),
   })
   .superRefine((data, ctx) => {
     // Rascunho pode ficar incompleto; para publicar, precisa de ingredientes e passos
@@ -197,7 +199,7 @@ export async function recipeRoutes(app: FastifyInstance) {
 
   app.post("/recipes", { onRequest: [app.authenticate] }, async (request, reply) => {
     const userId = request.user.sub;
-    const { allowDuplicate, ingredients, steps, ...fields } = recipeInputSchema.parse(request.body);
+    const { allowDuplicate, importId, ingredients, steps, ...fields } = recipeInputSchema.parse(request.body);
     const fingerprint = computeFingerprint(
       fields.name,
       ingredients.map((ingredient) => ingredient.item),
@@ -228,6 +230,14 @@ export async function recipeRoutes(app: FastifyInstance) {
       select: { id: true },
     });
 
+    if (importId) {
+      // updateMany com userId garante que só liga importações do próprio usuário
+      await prisma.recipeImport.updateMany({
+        where: { id: importId, userId },
+        data: { recipeId: recipe.id },
+      });
+    }
+
     return reply.status(201).send({ recipe });
   });
 
@@ -239,7 +249,13 @@ export async function recipeRoutes(app: FastifyInstance) {
     const existing = await prisma.recipe.findUnique({ where: { id }, select: { userId: true } });
     if (!existing || existing.userId !== request.user.sub) return reply.status(404).send(notFound);
 
-    const { allowDuplicate: _, ingredients, steps, ...fields } = recipeInputSchema.parse(request.body);
+    const {
+      allowDuplicate: _allowDuplicate,
+      importId: _importId,
+      ingredients,
+      steps,
+      ...fields
+    } = recipeInputSchema.parse(request.body);
 
     // Substitui ingredientes e passos pelos novos (o Prisma faz tudo numa transação)
     const recipe = await prisma.recipe.update({

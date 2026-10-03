@@ -9,9 +9,11 @@ import { Prisma } from "./generated/prisma/client.js";
 import { setupAuth } from "./lib/auth.js";
 import { UPLOAD_ROOT, UPLOAD_URL_PREFIX } from "./lib/storage.js";
 import { authRoutes } from "./routes/auth.js";
+import { AIError } from "./ai/types.js";
 import { healthRoutes } from "./routes/health.js";
+import { importRoutes, MAX_IMPORT_MB } from "./routes/imports.js";
 import { recipeRoutes } from "./routes/recipes.js";
-import { MAX_IMAGE_MB, uploadRoutes } from "./routes/uploads.js";
+import { uploadRoutes } from "./routes/uploads.js";
 
 export function buildApp() {
   const app = Fastify({ logger: true });
@@ -31,7 +33,8 @@ export function buildApp() {
     }),
   });
   setupAuth(app);
-  app.register(multipart, { limits: { fileSize: MAX_IMAGE_MB * 1024 * 1024, files: 1 } });
+  // Limite geral de 10 MB (PDFs da importação); a rota de fotos limita a 5 MB
+  app.register(multipart, { limits: { fileSize: MAX_IMPORT_MB * 1024 * 1024, files: 1 } });
   // Serve as imagens enviadas em /uploads/nome-do-arquivo.jpg
   app.register(fastifyStatic, { root: UPLOAD_ROOT, prefix: UPLOAD_URL_PREFIX });
 
@@ -49,6 +52,13 @@ export function buildApp() {
       return reply.status(409).send({ message: "Esse registro já existe" });
     }
 
+    // Falhas da IA (limite do Gemini, indisponibilidade, resposta inválida)
+    if (error instanceof AIError) {
+      request.log.warn({ code: error.code, cause: error.cause }, error.message);
+      const status = { NOT_CONFIGURED: 503, RATE_LIMITED: 429, UNAVAILABLE: 502, INVALID_OUTPUT: 502 }[error.code];
+      return reply.status(status).send({ message: error.message });
+    }
+
     if (error.statusCode && error.statusCode < 500) {
       return reply.status(error.statusCode).send({ message: error.message });
     }
@@ -61,6 +71,7 @@ export function buildApp() {
   app.register(authRoutes);
   app.register(uploadRoutes);
   app.register(recipeRoutes);
+  app.register(importRoutes);
 
   return app;
 }

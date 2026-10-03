@@ -42,6 +42,32 @@ export interface Recipe extends Omit<RecipeSummary, "user"> {
   steps: { id: string; description: string }[];
 }
 
+// Receita lida pela IA, ainda não salva (o usuário revisa no formulário)
+export interface RecipeDraft {
+  name: string;
+  description: string | null;
+  category: string | null;
+  prepMinutes: number | null;
+  servings: number | null;
+  difficulty: Difficulty | null;
+  freeText: string | null;
+  ingredients: { quantity: string | null; unit: string | null; item: string }[];
+  steps: string[];
+}
+
+export interface ImportUsage {
+  used: number;
+  limit: number;
+  remaining: number;
+}
+
+export interface ImportResponse {
+  import: { id: string; fileUrl: string | null; type: "IMAGE" | "PDF" | "TEXT"; fromCache: boolean };
+  recipe: RecipeDraft;
+  warnings: string[];
+  usage: ImportUsage;
+}
+
 // Dados enviados para criar ou editar uma receita
 export interface RecipeInput {
   name: string;
@@ -57,4 +83,5 @@ export interface RecipeInput {
   ingredients: { quantity: string | null; unit: string | null; item: string }[];
   steps: string[];
   allowDuplicate?: boolean;
+  importId?: string;
 }

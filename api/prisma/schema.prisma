@@ -29,6 +29,8 @@ enum Difficulty {
 enum ImportType {
   IMAGE
   PDF
+  // Texto corrigido pelo usuário e reorganizado pela IA ("Reorganizar com IA")
+  TEXT
 }
 
 enum ImportStatus {
@@ -122,11 +124,14 @@ model Step {
 model RecipeImport {
   id        String       @id @default(uuid())
   userId    String       @map("user_id")
-  fileUrl   String       @map("file_url")
-  // SHA-256 do arquivo: evita importar o mesmo arquivo duas vezes e reaproveita o resultado da IA
+  // Vazio quando a importação veio de texto
+  fileUrl   String?      @map("file_url")
+  // SHA-256 do arquivo (ou do texto): reaproveita o resultado da IA quando o conteúdo se repete
   fileHash  String       @map("file_hash")
   type      ImportType
   status    ImportStatus @default(PROCESSING)
+  // true quando o resultado foi reaproveitado de uma importação igual (não gastou IA nem conta no limite)
+  fromCache Boolean      @default(false) @map("from_cache")
   aiResult  Json?        @map("ai_result")
   aiWarnings Json?       @map("ai_warnings")
   error     String?

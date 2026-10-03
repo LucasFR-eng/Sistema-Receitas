@@ -17,6 +17,18 @@ export async function saveFile(data: Buffer, extension: string): Promise<string>
   return `${UPLOAD_URL_PREFIX}${fileName}`;
 }
 
+const IMAGE_MIME = { jpg: "image/jpeg", png: "image/png", webp: "image/webp" } as const;
+
+// Arquivos aceitos na importação com IA: imagens ou PDF
+export function detectImportFileType(
+  data: Buffer,
+): { extension: string; mimeType: string; type: "IMAGE" | "PDF" } | null {
+  const image = detectImageType(data);
+  if (image) return { extension: image, mimeType: IMAGE_MIME[image], type: "IMAGE" };
+  if (data.toString("ascii", 0, 5) === "%PDF-") return { extension: "pdf", mimeType: "application/pdf", type: "PDF" };
+  return null;
+}
+
 // Confere o tipo real pelos primeiros bytes do arquivo ("assinatura"),
 // porque o tipo informado pelo navegador pode ser falsificado.
 export function detectImageType(data: Buffer): "jpg" | "png" | "webp" | null {

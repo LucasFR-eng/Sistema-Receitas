@@ -13,7 +13,19 @@ const envSchema = z.object({
   AI_PROVIDER: z.enum(["gemini"]).default("gemini"),
   // Opcional para a API subir sem IA; só é exigida quando a IA for usada
   GEMINI_API_KEY: z.string().optional(),
-  GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
+  GEMINI_MODEL: z.string().default("gemini-3.8-flash"),
+  // Modelos reserva separados por vírgula, usados quando o principal está sobrecarregado
+  GEMINI_FALLBACK_MODELS: z
+    .string()
+    .default("gemini-3.5-flash")
+    .transform((value) =>
+      value
+        .split(",")
+        .map((model) => model.trim())
+        .filter(Boolean),
+    ),
+  // Quantas leituras com IA cada usuário pode fazer por mês (reaproveitamentos não contam)
+  IMPORT_MONTHLY_LIMIT: z.coerce.number().int().min(0).default(10),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -1,7 +1,7 @@
 import { useId, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { ApiError, uploadImage, type FieldErrors } from "../lib/api.ts";
 import { DIFFICULTY_LABELS, mediaUrl, RECIPE_CATEGORIES } from "../lib/recipes.ts";
-import type { Difficulty, Recipe, RecipeInput, RecipeStatus, Visibility } from "../types.ts";
+import type { Difficulty, RecipeInput, RecipeStatus, Visibility } from "../types.ts";
 import { FormError } from "./AuthCard.tsx";
 import { TextField } from "./TextField.tsx";
 
@@ -34,11 +34,26 @@ interface FormState {
   steps: StepRow[];
 }
 
+// Valores iniciais do formulário: uma receita existente (edição) ou um rascunho lido pela IA
+export interface RecipeFormValues {
+  name: string;
+  description: string | null;
+  photoUrl?: string | null;
+  category: string | null;
+  prepMinutes: number | null;
+  servings: number | null;
+  difficulty: Difficulty | null;
+  visibility?: Visibility;
+  freeText: string | null;
+  ingredients: { id?: string; quantity: string | null; unit: string | null; item: string }[];
+  steps: { id?: string; description: string }[];
+}
+
 const newKey = () => crypto.randomUUID();
 const emptyIngredient = (): IngredientRow => ({ key: newKey(), quantity: "", unit: "", item: "" });
 const emptyStep = (): StepRow => ({ key: newKey(), text: "" });
 
-function toFormState(recipe?: Recipe): FormState {
+function toFormState(recipe?: RecipeFormValues): FormState {
   if (!recipe) {
     return {
       name: "",
@@ -58,23 +73,23 @@ function toFormState(recipe?: Recipe): FormState {
   return {
     name: recipe.name,
     description: recipe.description ?? "",
-    photoUrl: recipe.photoUrl,
+    photoUrl: recipe.photoUrl ?? null,
     category: recipe.category ?? "",
     prepMinutes: recipe.prepMinutes?.toString() ?? "",
     servings: recipe.servings?.toString() ?? "",
     difficulty: recipe.difficulty ?? "",
-    visibility: recipe.visibility,
+    visibility: recipe.visibility ?? "PUBLIC",
     freeText: recipe.freeText ?? "",
     ingredients: recipe.ingredients.length
       ? recipe.ingredients.map((ingredient) => ({
-          key: ingredient.id,
+          key: ingredient.id ?? newKey(),
           quantity: ingredient.quantity ?? "",
           unit: ingredient.unit ?? "",
           item: ingredient.item,
         }))
       : [emptyIngredient()],
     steps: recipe.steps.length
-      ? recipe.steps.map((step) => ({ key: step.id, text: step.description }))
+      ? recipe.steps.map((step) => ({ key: step.id ?? newKey(), text: step.description }))
       : [emptyStep()],
   };
 }
@@ -109,17 +124,22 @@ function move<T>(list: T[], from: number, to: number): T[] {
   return copy;
 }
 
+const MIN_REORGANIZE_LENGTH = 20;
+
 interface RecipeFormProps {
-  recipe?: Recipe;
+  initialValues?: RecipeFormValues;
   onSave: (input: RecipeInput) => Promise<void>;
+  // Envia o texto livre para a IA e devolve a receita reorganizada
+  onReorganize?: (text: string) => Promise<RecipeFormValues>;
 }
 
-export function RecipeForm({ recipe, onSave }: RecipeFormProps) {
-  const [form, setForm] = useState<FormState>(() => toFormState(recipe));
+export function RecipeForm({ initialValues, onSave, onReorganize }: RecipeFormProps) {
+  const [form, setForm] = useState<FormState>(() => toFormState(initialValues));
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState<RecipeStatus | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [reorganizing, setReorganizing] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const ids = useId();
 
@@ -164,6 +184,37 @@ export function RecipeForm({ recipe, onSave }: RecipeFormProps) {
     }
   }
 
+  async function reorganize() {
+    if (!onReorganize) return;
+    const hasContent = form.ingredients.some((row) => row.item.trim()) || form.steps.some((row) => row.text.trim());
+    if (
+      hasContent &&
+      !window.confirm("A IA vai substituir nome, ingredientes, passos e detalhes pelo que entender do texto. Continuar?")
+    ) {
+      return;
+    }
+
+    setReorganizing(true);
+    setFieldErrors((current) => ({ ...current, freeText: undefined }));
+    try {
+      const values = await onReorganize(form.freeText);
+      const next = toFormState(values);
+      // Mantém o que a IA não mexe: foto, visibilidade e o texto que o usuário escreveu
+      setForm((current) => ({
+        ...next,
+        name: next.name || current.name,
+        photoUrl: current.photoUrl,
+        visibility: current.visibility,
+        freeText: current.freeText,
+      }));
+    } catch (err) {
+      const message = err instanceof ApiError ? (err.fieldErrors.text?.[0] ?? err.message) : "Não foi possível reorganizar";
+      setFieldErrors((current) => ({ ...current, freeText: [message] }));
+    } finally {
+      setReorganizing(false);
+    }
+  }
+
   async function submit(status: RecipeStatus) {
     setError(null);
     setFieldErrors({});
@@ -188,7 +239,7 @@ export function RecipeForm({ recipe, onSave }: RecipeFormProps) {
     submit("PUBLISHED");
   }
 
-  const busy = saving !== null || uploading;
+  const busy = saving !== null || uploading || reorganizing;
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-8">
@@ -409,10 +460,20 @@ export function RecipeForm({ recipe, onSave }: RecipeFormProps) {
           value={form.freeText}
           onChange={(value) => update("freeText", value)}
           error={fieldErrors.freeText?.[0]}
-          rows={4}
-          placeholder="Dicas, variações, a história da receita…"
-          hint="Quando você importar uma receita por foto, o texto lido pela IA aparece aqui para você corrigir."
+          rows={6}
+          placeholder="Dicas, variações, a história da receita… ou cole o texto de uma receita e clique em Reorganizar com IA."
+          hint="O texto lido pela IA aparece aqui. Corrija o que ela não entendeu e clique em Reorganizar com IA para atualizar os campos."
         />
+        {onReorganize && (
+          <button
+            type="button"
+            onClick={reorganize}
+            disabled={busy || form.freeText.trim().length < MIN_REORGANIZE_LENGTH}
+            className="rounded-lg bg-brand-50 px-4 py-2 text-sm font-medium text-brand-700 ring-1 ring-brand-200 transition hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {reorganizing ? "Reorganizando… pode levar até 1 minuto" : "✨ Reorganizar com IA"}
+          </button>
+        )}
       </Section>
 
       <Section title="Quem pode ver">

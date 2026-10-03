@@ -1,10 +1,14 @@
 import { z } from "zod";
+import { RECIPE_CATEGORIES } from "../lib/categories.js";
 
 // Formato que qualquer provedor de IA deve devolver ao ler uma receita.
 export const extractedRecipeSchema = z.object({
-  name: z.string().describe("Nome da receita"),
+  name: z.string().describe("Nome da receita. Vazio se o conteúdo não for uma receita"),
   description: z.string().nullable().describe("Descrição curta, se houver"),
-  category: z.string().nullable().describe("Categoria, ex: doces, salgados, bebidas"),
+  category: z
+    .enum(RECIPE_CATEGORIES)
+    .nullable()
+    .describe("Categoria que melhor descreve a receita, ou null se nenhuma servir"),
   prepMinutes: z.number().int().nullable().describe("Tempo total de preparo em minutos"),
   servings: z.number().int().nullable().describe("Quantidade de porções"),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD"]).nullable(),
@@ -16,7 +20,7 @@ export const extractedRecipeSchema = z.object({
     }),
   ),
   steps: z.array(z.string()).describe("Modo de preparo, um passo por item, na ordem"),
-  rawText: z.string().describe("Transcrição completa do texto encontrado no arquivo"),
+  rawText: z.string().describe("Transcrição completa do texto encontrado"),
   warnings: z
     .array(z.string())
     .describe("Problemas encontrados: trechos ilegíveis, quantidades faltando, incoerências"),
@@ -24,7 +28,19 @@ export const extractedRecipeSchema = z.object({
 
 export type ExtractedRecipe = z.infer<typeof extractedRecipeSchema>;
 
-export interface RecipeFile {
-  data: Buffer;
-  mimeType: string;
+// O que pode ser enviado para a IA: um arquivo (foto/PDF) ou um texto
+export type RecipeSource =
+  | { kind: "file"; data: Buffer; mimeType: string }
+  | { kind: "text"; text: string };
+
+// Erros da IA já traduzidos para algo que dá para mostrar ao usuário
+export class AIError extends Error {
+  constructor(
+    message: string,
+    public readonly code: "NOT_CONFIGURED" | "RATE_LIMITED" | "UNAVAILABLE" | "INVALID_OUTPUT",
+    // Erro original do provedor, guardado para aparecer no log
+    options?: { cause?: unknown },
+  ) {
+    super(message, options);
+  }
 }
