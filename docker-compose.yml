@@ -39,10 +39,7 @@ services:
 
   web:
     profiles: ["app"]
-    build:
-      context: ./web
-      args:
-        VITE_API_URL: http://localhost:3333
+    build: ./web
     ports:
       - "8080:80"
     depends_on:

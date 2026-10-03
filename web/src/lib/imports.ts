@@ -1,12 +1,15 @@
 import type { RecipeFormValues } from "../components/RecipeForm.tsx";
 import type { ImportResponse, ImportUsage, RecipeDraft } from "../types.ts";
 import { api, postFile } from "./api.ts";
+import { compressImage } from "./image.ts";
 
-export const MAX_IMPORT_MB = 10;
+// PDFs são enviados como estão (a Vercel aceita até 4,5 MB); fotos são reduzidas antes
+export const MAX_PDF_MB = 4;
 export const IMPORT_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
 
-export function importFromFile(file: File) {
-  return postFile<ImportResponse>("/imports/file", file);
+// 2000px no lado maior mantém letras pequenas legíveis para a IA
+export async function importFromFile(file: File) {
+  return postFile<ImportResponse>("/imports/file", await compressImage(file, 2000));
 }
 
 export function importFromText(text: string) {

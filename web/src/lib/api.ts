@@ -1,4 +1,9 @@
-export const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3333";
+import { compressImage } from "./image.ts";
+
+// A API fica em /api no mesmo endereço do site: no desenvolvimento o Vite repassa para
+// localhost:3333 e na Vercel o vercel.json repassa para o projeto da API. Assim o navegador
+// trata o cookie de login como do próprio site (alguns navegadores bloqueiam cookies de outros endereços).
+export const API_URL = import.meta.env.VITE_API_URL ?? "/api";
 
 export type FieldErrors = Record<string, string[] | undefined>;
 
@@ -54,8 +59,8 @@ export function postFile<T>(path: string, file: File): Promise<T> {
   return request<T>(path, { method: "POST", body: form });
 }
 
-// Envia uma imagem e devolve o caminho onde ela ficou salva
+// Reduz a imagem, envia e devolve o endereço onde ela ficou salva
 export async function uploadImage(file: File): Promise<string> {
-  const data = await postFile<{ url: string }>("/uploads/images", file);
+  const data = await postFile<{ url: string }>("/uploads/images", await compressImage(file, 1600));
   return data.url;
 }

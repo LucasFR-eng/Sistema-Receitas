@@ -1,4 +1,6 @@
+import { Redis } from "ioredis";
 import { EventEmitter } from "node:events";
+import { env } from "../env.js";
 
 // Avisos enviados em tempo real para quem está com o feed aberto
 export type FeedEvent =
@@ -9,26 +11,64 @@ export type FeedEvent =
 // Avisos de uma receita específica, para quem está com a página dela aberta
 export type RecipeEvent = { type: "comment:created"; comment: unknown } | { type: "comment:deleted"; id: string };
 
-// Central de avisos em memória. Funciona com um único servidor da API;
-// se um dia rodarem várias cópias da API, troque por um pub/sub compartilhado (ex: Redis).
-const emitter = new EventEmitter();
-// Cada navegador conectado é um "ouvinte"; o padrão do Node avisa a partir de 10
-emitter.setMaxListeners(0);
+type AnyEvent = FeedEvent | RecipeEvent;
+
+const FEED_CHANNEL = "feed";
+const recipeChannel = (recipeId: string) => `recipe:${recipeId}`;
+
+// Entrega local: cada navegador conectado a esta cópia da API é um "ouvinte"
+const local = new EventEmitter();
+local.setMaxListeners(0);
+
+// Na Vercel a API pode rodar em várias cópias ao mesmo tempo. O Redis (pub/sub) leva cada aviso
+// a todas elas. Sem REDIS_URL (desenvolvimento), os avisos ficam só na memória desta cópia.
+const redisUrl = env.REDIS_URL ?? env.KV_URL;
+const publisher = redisUrl ? new Redis(redisUrl, { lazyConnect: true }) : null;
+// Assinar canais trava a conexão para outros comandos, por isso uma conexão separada
+const subscriber = redisUrl ? new Redis(redisUrl, { lazyConnect: true }) : null;
+
+subscriber?.on("message", (channel: string, message: string) => {
+  local.emit(channel, JSON.parse(message));
+});
+
+function publish(channel: string, event: AnyEvent) {
+  if (publisher) {
+    publisher.publish(channel, JSON.stringify(event)).catch((error) => {
+      console.error("Falha ao publicar aviso no Redis", error);
+    });
+  } else {
+    local.emit(channel, event);
+  }
+}
+
+function subscribe<T extends AnyEvent>(channel: string, listener: (event: T) => void): () => void {
+  local.on(channel, listener);
+  // Assina o canal no Redis só quando chega o primeiro ouvinte desta cópia
+  if (subscriber && local.listenerCount(channel) === 1) {
+    subscriber.subscribe(channel).catch((error) => console.error("Falha ao assinar canal no Redis", error));
+  }
+
+  return () => {
+    local.off(channel, listener);
+    // E cancela quando o último ouvinte sai
+    if (subscriber && local.listenerCount(channel) === 0) {
+      subscriber.unsubscribe(channel).catch(() => {});
+    }
+  };
+}
 
 export function publishFeedEvent(event: FeedEvent) {
-  emitter.emit("feed", event);
+  publish(FEED_CHANNEL, event);
 }
 
 export function subscribeToFeed(listener: (event: FeedEvent) => void): () => void {
-  emitter.on("feed", listener);
-  return () => emitter.off("feed", listener);
+  return subscribe(FEED_CHANNEL, listener);
 }
 
 export function publishRecipeEvent(recipeId: string, event: RecipeEvent) {
-  emitter.emit(`recipe:${recipeId}`, event);
+  publish(recipeChannel(recipeId), event);
 }
 
 export function subscribeToRecipe(recipeId: string, listener: (event: RecipeEvent) => void): () => void {
-  emitter.on(`recipe:${recipeId}`, listener);
-  return () => emitter.off(`recipe:${recipeId}`, listener);
+  return subscribe(recipeChannel(recipeId), listener);
 }

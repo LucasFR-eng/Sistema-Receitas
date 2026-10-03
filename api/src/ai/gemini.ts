@@ -10,6 +10,10 @@ const responseJsonSchema = z.toJSONSchema(extractedRecipeSchema);
 // Esperas entre tentativas quando o modelo está sobrecarregado (503) ou com erro interno (500)
 const RETRY_DELAYS_MS = [1_000, 3_000];
 
+// Tempo máximo somando todas as tentativas. Na Vercel, o repasse do front para a API
+// corta a conexão em 2 minutos; é melhor desistir antes e responder com uma mensagem clara.
+const TOTAL_TIMEOUT_MS = 100_000;
+
 const isTemporary = (error: unknown) =>
   error instanceof ApiError && (error.status === 500 || error.status === 503);
 
@@ -57,6 +61,8 @@ export class GeminiProvider implements AIProvider {
   // Tenta cada modelo (principal e reservas), repetindo quando o erro é temporário
   private async generate(parts: Part[]): Promise<string | undefined> {
     const client = this.getClient();
+    // Cancela a chamada em andamento quando o tempo total acaba
+    const deadline = AbortSignal.timeout(TOTAL_TIMEOUT_MS);
     let lastError: unknown;
 
     for (const model of this.models) {
@@ -65,11 +71,16 @@ export class GeminiProvider implements AIProvider {
           const response = await client.models.generateContent({
             model,
             contents: [{ role: "user", parts }],
-            config: { responseMimeType: "application/json", responseJsonSchema },
+            config: { responseMimeType: "application/json", responseJsonSchema, abortSignal: deadline },
           });
           return response.text;
         } catch (error) {
           lastError = error;
+          if (deadline.aborted) {
+            throw new AIError("A IA demorou demais para responder. Tente novamente.", "UNAVAILABLE", {
+              cause: error,
+            });
+          }
           if (!isTemporary(error)) break;
           const delay = RETRY_DELAYS_MS[attempt];
           if (delay !== undefined) await sleep(delay);

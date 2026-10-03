@@ -52,7 +52,8 @@ export function formatMinutes(minutes: number): string {
   return rest ? `${hours}h${String(rest).padStart(2, "0")}` : `${hours}h`;
 }
 
-// Fotos ficam na API; o banco guarda só o caminho (/uploads/...)
+// Em produção as fotos ficam no Vercel Blob (endereço completo, https://...);
+// no desenvolvimento ficam na API e o banco guarda só o caminho (/uploads/...)
 export function mediaUrl(path: string): string {
-  return `${API_URL}${path}`;
+  return /^https?:\/\//.test(path) ? path : `${API_URL}${path}`;
 }

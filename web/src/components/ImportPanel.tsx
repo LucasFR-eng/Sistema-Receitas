@@ -1,6 +1,7 @@
 import { useEffect, useState, type DragEvent } from "react";
 import { ApiError } from "../lib/api.ts";
-import { getImportUsage, IMPORT_ACCEPT, importFromFile, MAX_IMPORT_MB } from "../lib/imports.ts";
+import { MAX_ORIGINAL_IMAGE_MB } from "../lib/image.ts";
+import { getImportUsage, IMPORT_ACCEPT, importFromFile, MAX_PDF_MB } from "../lib/imports.ts";
 import type { ImportResponse, ImportUsage } from "../types.ts";
 
 // Mensagens que vão mudando enquanto a IA trabalha, para a espera não parecer travada
@@ -41,8 +42,11 @@ export function ImportPanel({ onImported }: { onImported: (response: ImportRespo
       setError("Envie uma foto (JPG, PNG ou WEBP) ou um PDF.");
       return;
     }
-    if (file.size > MAX_IMPORT_MB * 1024 * 1024) {
-      setError(`O arquivo pode ter no máximo ${MAX_IMPORT_MB} MB.`);
+    // Fotos são reduzidas antes do envio; PDFs vão como estão
+    const isPdf = file.type === "application/pdf";
+    const maxMb = isPdf ? MAX_PDF_MB : MAX_ORIGINAL_IMAGE_MB;
+    if (file.size > maxMb * 1024 * 1024) {
+      setError(isPdf ? `O PDF pode ter no máximo ${maxMb} MB.` : `A foto pode ter no máximo ${maxMb} MB.`);
       return;
     }
 
@@ -100,7 +104,7 @@ export function ImportPanel({ onImported }: { onImported: (response: ImportRespo
           <span className="mt-4 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm">
             Escolher arquivo
           </span>
-          <span className="mt-2 text-xs text-stone-500">ou arraste aqui · JPG, PNG, WEBP ou PDF até {MAX_IMPORT_MB} MB</span>
+          <span className="mt-2 text-xs text-stone-500">ou arraste aqui · foto (JPG, PNG, WEBP) ou PDF até {MAX_PDF_MB} MB</span>
           <input
             type="file"
             accept={IMPORT_ACCEPT}

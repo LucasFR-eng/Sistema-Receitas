@@ -13,6 +13,7 @@ import {
   recipeSummarySelect,
   withFavorites,
 } from "../lib/recipe-queries.js";
+import { isOwnImageUrl } from "../lib/storage.js";
 import { normalizeText } from "../lib/text.js";
 
 // Texto opcional: string vazia vira null
@@ -40,7 +41,7 @@ const recipeInputSchema = z
     // Só aceita imagens enviadas pela nossa rota de upload
     photoUrl: z
       .string()
-      .regex(/^\/uploads\/[a-f0-9-]+\.(jpg|png|webp)$/, "Foto inválida")
+      .refine(isOwnImageUrl, "Foto inválida")
       .nullish()
       .transform((value) => value ?? null),
     category: z

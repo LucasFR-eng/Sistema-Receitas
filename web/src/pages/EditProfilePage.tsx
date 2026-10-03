@@ -7,7 +7,7 @@ import { TextField } from "../components/TextField.tsx";
 import { api, ApiError, uploadImage, type FieldErrors } from "../lib/api.ts";
 import type { User } from "../types.ts";
 
-const MAX_IMAGE_MB = 5;
+import { MAX_ORIGINAL_IMAGE_MB } from "../lib/image.ts";
 const MAX_BIO = 300;
 
 export function EditProfilePage() {
@@ -27,8 +27,8 @@ export function EditProfilePage() {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
-    if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
-      setFieldErrors({ ...fieldErrors, avatarUrl: [`A foto pode ter no máximo ${MAX_IMAGE_MB} MB`] });
+    if (file.size > MAX_ORIGINAL_IMAGE_MB * 1024 * 1024) {
+      setFieldErrors({ ...fieldErrors, avatarUrl: [`A foto pode ter no máximo ${MAX_ORIGINAL_IMAGE_MB} MB`] });
       return;
     }
 
@@ -106,7 +106,7 @@ export function EditProfilePage() {
             />
           </div>
           <p className={`mt-1 text-sm ${fieldErrors.avatarUrl ? "text-red-600" : "text-stone-500"}`}>
-            {fieldErrors.avatarUrl?.[0] ?? `JPG, PNG ou WEBP, até ${MAX_IMAGE_MB} MB`}
+            {fieldErrors.avatarUrl?.[0] ?? "JPG, PNG ou WEBP"}
           </p>
         </div>
 

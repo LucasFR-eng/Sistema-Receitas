@@ -5,7 +5,7 @@ import type { Difficulty, RecipeInput, RecipeStatus, Visibility } from "../types
 import { FormError } from "./AuthCard.tsx";
 import { TextField } from "./TextField.tsx";
 
-const MAX_IMAGE_MB = 5;
+import { MAX_ORIGINAL_IMAGE_MB } from "../lib/image.ts";
 
 // Cada linha ganha uma "key" estável para o React não confundir as linhas ao remover/reordenar
 interface IngredientRow {
@@ -172,8 +172,11 @@ export function RecipeForm({ initialValues, onSave, onReorganize }: RecipeFormPr
     event.target.value = "";
     if (!file) return;
 
-    if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
-      setFieldErrors((current) => ({ ...current, photoUrl: [`A imagem pode ter no máximo ${MAX_IMAGE_MB} MB`] }));
+    if (file.size > MAX_ORIGINAL_IMAGE_MB * 1024 * 1024) {
+      setFieldErrors((current) => ({
+        ...current,
+        photoUrl: [`A imagem pode ter no máximo ${MAX_ORIGINAL_IMAGE_MB} MB`],
+      }));
       return;
     }
 
@@ -308,7 +311,7 @@ export function RecipeForm({ initialValues, onSave, onReorganize }: RecipeFormPr
               className="hidden"
             />
           </div>
-          <FieldMessage error={fieldErrors.photoUrl?.[0]} hint={`JPG, PNG ou WEBP, até ${MAX_IMAGE_MB} MB`} />
+          <FieldMessage error={fieldErrors.photoUrl?.[0]} hint="JPG, PNG ou WEBP. Fotos grandes são reduzidas automaticamente." />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">

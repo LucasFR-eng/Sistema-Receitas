@@ -1,20 +1,57 @@
+import { put } from "@vercel/blob";
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { env } from "../env.js";
 
+// Dois "motores" de armazenamento:
+// - Vercel Blob, quando BLOB_READ_WRITE_TOKEN está configurado (produção na Vercel, que não tem disco)
+// - pasta local (desenvolvimento), servida pela própria API em /uploads
+export const useBlobStorage = Boolean(env.BLOB_READ_WRITE_TOKEN);
+
 export const UPLOAD_ROOT = path.resolve(env.UPLOAD_DIR);
 export const UPLOAD_URL_PREFIX = "/uploads/";
 
-mkdirSync(UPLOAD_ROOT, { recursive: true });
+if (!useBlobStorage) mkdirSync(UPLOAD_ROOT, { recursive: true });
 
-// Em desenvolvimento os arquivos ficam numa pasta local.
-// Em produção, basta trocar esta função para enviar ao Cloudflare R2; quem a usa não muda.
+const MIME_TYPES: Record<string, string> = {
+  jpg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  pdf: "application/pdf",
+};
+
+// Salva o arquivo e devolve o endereço dele (caminho local ou URL do Blob)
 export async function saveFile(data: Buffer, extension: string): Promise<string> {
   const fileName = `${randomUUID()}.${extension}`;
+
+  if (useBlobStorage) {
+    const blob = await put(`uploads/${fileName}`, data, {
+      access: "public",
+      contentType: MIME_TYPES[extension],
+    });
+    return blob.url;
+  }
+
   await writeFile(path.join(UPLOAD_ROOT, fileName), data);
   return `${UPLOAD_URL_PREFIX}${fileName}`;
+}
+
+// Aceita só imagens enviadas pela nossa rota de upload (evita apontar para sites de terceiros)
+export function isOwnImageUrl(url: string): boolean {
+  if (/^\/uploads\/[a-f0-9-]+\.(jpg|png|webp)$/.test(url)) return true;
+  if (!useBlobStorage) return false;
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.protocol === "https:" &&
+      parsed.hostname.endsWith(".public.blob.vercel-storage.com") &&
+      /^\/uploads\/[a-f0-9-]+\.(jpg|png|webp)$/.test(parsed.pathname)
+    );
+  } catch {
+    return false;
+  }
 }
 
 const IMAGE_MIME = { jpg: "image/jpeg", png: "image/png", webp: "image/webp" } as const;

@@ -74,6 +74,10 @@ Em **Nova receita → Importar com IA**, o usuário envia uma foto ou PDF e o Ge
 - Arquivo ou texto idêntico a um já lido reaproveita o resultado, sem chamar a IA e sem contar no limite
 - Erros da IA ficam salvos na coluna `error` da tabela `recipe_imports` (veja com `npm --prefix api run db:studio`)
 
+## Deploy
+
+Veja o passo a passo para publicar de graça na Vercel em [DEPLOY.md](DEPLOY.md).
+
 ## Comandos úteis
 
 | Comando (dentro de `api/`) | O que faz |

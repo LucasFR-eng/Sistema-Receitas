@@ -7,7 +7,7 @@ import { z, ZodError } from "zod";
 import { env } from "./env.js";
 import { Prisma } from "./generated/prisma/client.js";
 import { setupAuth } from "./lib/auth.js";
-import { UPLOAD_ROOT, UPLOAD_URL_PREFIX } from "./lib/storage.js";
+import { UPLOAD_ROOT, UPLOAD_URL_PREFIX, useBlobStorage } from "./lib/storage.js";
 import { authRoutes } from "./routes/auth.js";
 import { AIError } from "./ai/types.js";
 import { commentRoutes } from "./routes/comments.js";
@@ -20,7 +20,8 @@ import { uploadRoutes } from "./routes/uploads.js";
 import { userRoutes } from "./routes/users.js";
 
 export function buildApp() {
-  const app = Fastify({ logger: true });
+  // trustProxy: atrás da Vercel (ou de outro proxy), usa o IP real do visitante para o limite de tentativas
+  const app = Fastify({ logger: true, trustProxy: true });
 
   // credentials: true permite que o navegador envie o cookie de login para a API
   // methods: por padrão o CORS só libera GET/HEAD/POST; editar (PUT) e excluir (DELETE) precisam estar na lista
@@ -37,10 +38,11 @@ export function buildApp() {
     }),
   });
   setupAuth(app);
-  // Limite geral de 10 MB (PDFs da importação); a rota de fotos limita a 5 MB
+  // Até 4 MB por arquivo: a Vercel não aceita requisições acima de 4,5 MB
   app.register(multipart, { limits: { fileSize: MAX_IMPORT_MB * 1024 * 1024, files: 1 } });
-  // Serve as imagens enviadas em /uploads/nome-do-arquivo.jpg
-  app.register(fastifyStatic, { root: UPLOAD_ROOT, prefix: UPLOAD_URL_PREFIX });
+  // No modo local, serve as imagens enviadas em /uploads/nome-do-arquivo.jpg
+  // (no Vercel Blob, as imagens já têm um endereço público próprio)
+  if (!useBlobStorage) app.register(fastifyStatic, { root: UPLOAD_ROOT, prefix: UPLOAD_URL_PREFIX });
 
   app.setErrorHandler((error: FastifyError, request, reply) => {
     // Dados enviados não passaram na validação do zod

@@ -7,7 +7,8 @@ import { env } from "../env.js";
 import { prisma } from "../lib/prisma.js";
 import { detectImportFileType, saveFile } from "../lib/storage.js";
 
-export const MAX_IMPORT_MB = 10;
+// A Vercel não aceita requisições acima de 4,5 MB; o navegador reduz as fotos antes de enviar
+export const MAX_IMPORT_MB = 4;
 
 // Leituras com IA são caras: no máximo 5 por minuto por usuário, além do limite mensal
 const importRateLimit = { rateLimit: { max: 5, timeWindow: "1 minute" } };

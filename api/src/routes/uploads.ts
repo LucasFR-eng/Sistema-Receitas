@@ -1,7 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { detectImageType, saveFile } from "../lib/storage.js";
 
-export const MAX_IMAGE_MB = 5;
+// A Vercel não aceita requisições acima de 4,5 MB; o navegador reduz as fotos antes de enviar
+export const MAX_IMAGE_MB = 4;
 
 export async function uploadRoutes(app: FastifyInstance) {
   // Recebe uma imagem (campo "file") e devolve o endereço onde ela ficou salva

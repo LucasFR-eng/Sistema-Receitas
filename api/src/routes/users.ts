@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getUserId } from "../lib/auth.js";
 import { prisma } from "../lib/prisma.js";
 import { findRecipePage } from "../lib/recipe-queries.js";
+import { isOwnImageUrl } from "../lib/storage.js";
 
 // Dados que qualquer pessoa pode ver no perfil (sem e-mail)
 const publicProfileSelect = {
@@ -34,7 +35,7 @@ const updateProfileSchema = z.object({
   // Só aceita imagens enviadas pela nossa rota de upload
   avatarUrl: z
     .string()
-    .regex(/^\/uploads\/[a-f0-9-]+\.(jpg|png|webp)$/, "Foto inválida")
+    .refine(isOwnImageUrl, "Foto inválida")
     .nullish()
     .transform((value) => value ?? null),
 });

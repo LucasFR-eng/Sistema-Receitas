@@ -10,6 +10,12 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL é obrigatória"),
   JWT_SECRET: z.string().min(32, "JWT_SECRET precisa ter pelo menos 32 caracteres"),
   UPLOAD_DIR: z.string().default("./uploads"),
+  // Produção (Vercel): token do Vercel Blob para guardar fotos e PDFs. Sem ele, usa a pasta UPLOAD_DIR
+  BLOB_READ_WRITE_TOKEN: z.string().optional(),
+  // Produção (Vercel): Redis para os avisos em tempo real chegarem a todas as cópias da API.
+  // A integração do Upstash na Vercel cria REDIS_URL (ou KV_URL). Sem ele, os avisos ficam em memória
+  REDIS_URL: z.string().optional(),
+  KV_URL: z.string().optional(),
   AI_PROVIDER: z.enum(["gemini"]).default("gemini"),
   // Opcional para a API subir sem IA; só é exigida quando a IA for usada
   GEMINI_API_KEY: z.string().optional(),
