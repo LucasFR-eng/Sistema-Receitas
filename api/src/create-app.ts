@@ -19,6 +19,8 @@ import { recipeRoutes } from "./routes/recipes.js";
 import { uploadRoutes } from "./routes/uploads.js";
 import { userRoutes } from "./routes/users.js";
 
+export const API_PREFIX = "/api";
+
 export function buildApp() {
   // trustProxy: atrás da Vercel (ou de outro proxy), usa o IP real do visitante para o limite de tentativas
   const app = Fastify({ logger: true, trustProxy: true });
@@ -40,9 +42,6 @@ export function buildApp() {
   setupAuth(app);
   // Até 4 MB por arquivo: a Vercel não aceita requisições acima de 4,5 MB
   app.register(multipart, { limits: { fileSize: MAX_IMPORT_MB * 1024 * 1024, files: 1 } });
-  // No modo local, serve as imagens enviadas em /uploads/nome-do-arquivo.jpg
-  // (no Vercel Blob, as imagens já têm um endereço público próprio)
-  if (!useBlobStorage) app.register(fastifyStatic, { root: UPLOAD_ROOT, prefix: UPLOAD_URL_PREFIX });
 
   app.setErrorHandler((error: FastifyError, request, reply) => {
     // Dados enviados não passaram na validação do zod
@@ -73,15 +72,26 @@ export function buildApp() {
     return reply.status(500).send({ message: "Erro interno. Tente novamente em instantes." });
   });
 
-  app.register(healthRoutes);
-  app.register(authRoutes);
-  app.register(uploadRoutes);
-  app.register(recipeRoutes);
-  app.register(importRoutes);
-  app.register(feedRoutes);
-  app.register(favoriteRoutes);
-  app.register(userRoutes);
-  app.register(commentRoutes);
+  // Todas as rotas ficam sob /api (ex: /api/recipes). Na Vercel, o site e a API dividem o mesmo
+  // endereço e o que começa com /api vai para a API; no desenvolvimento o Vite faz o mesmo repasse.
+  app.register(
+    async (api) => {
+      // No modo local, serve as imagens enviadas em /api/uploads/nome-do-arquivo.jpg
+      // (no Vercel Blob, as imagens já têm um endereço público próprio)
+      if (!useBlobStorage) api.register(fastifyStatic, { root: UPLOAD_ROOT, prefix: UPLOAD_URL_PREFIX });
+
+      api.register(healthRoutes);
+      api.register(authRoutes);
+      api.register(uploadRoutes);
+      api.register(recipeRoutes);
+      api.register(importRoutes);
+      api.register(feedRoutes);
+      api.register(favoriteRoutes);
+      api.register(userRoutes);
+      api.register(commentRoutes);
+    },
+    { prefix: API_PREFIX },
+  );
 
   return app;
 }

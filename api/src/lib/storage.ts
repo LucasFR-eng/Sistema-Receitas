@@ -7,7 +7,8 @@ import { env } from "../env.js";
 
 // Dois "motores" de armazenamento:
 // - Vercel Blob, quando BLOB_READ_WRITE_TOKEN está configurado (produção na Vercel, que não tem disco)
-// - pasta local (desenvolvimento), servida pela própria API em /uploads
+// - pasta local (desenvolvimento), servida pela própria API em /api/uploads
+//   (o banco guarda "/uploads/arquivo.jpg"; o front acrescenta o "/api")
 export const useBlobStorage = Boolean(env.BLOB_READ_WRITE_TOKEN);
 
 export const UPLOAD_ROOT = path.resolve(env.UPLOAD_DIR);

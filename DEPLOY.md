@@ -1,13 +1,16 @@
 # Deploy na Vercel (gratuito)
 
-O RecipeLens vira **dois projetos na Vercel**, apontando para o mesmo repositório do GitHub:
+O RecipeLens vira **um único projeto na Vercel** usando o recurso **Services**:
 
-| Projeto | Pasta (Root Directory) | O que é |
+| Serviço | Pasta | Endereço |
 |---|---|---|
-| `recipelens-api` | `api` | A API (Fastify), rodando como Vercel Function |
-| `recipelens` | `web` | O site (React). Repassa `/api/*` para o projeto da API |
+| `web` (React + Vite) | `web/` | tudo que não começa com `/api` |
+| `api` (Fastify) | `api/` | `/api/...` |
 
-Serviços gratuitos ligados ao projeto da API pelo painel da Vercel:
+Essa divisão está no [vercel.json](vercel.json) da raiz. Como site e API dividem o mesmo endereço,
+o cookie de login funciona em todos os navegadores.
+
+Serviços gratuitos ligados ao projeto pelo painel da Vercel:
 
 | Serviço | Para quê | Variável que cria |
 |---|---|---|
@@ -17,44 +20,45 @@ Serviços gratuitos ligados ao projeto da API pelo painel da Vercel:
 
 > O plano gratuito (Hobby) da Vercel **não permite uso comercial**. Quando começar a cobrar, migre para o plano Pro ou outra hospedagem.
 
-## 1. Projeto da API
+## 1. Criar o projeto
 
-1. Em https://vercel.com/new, importe o repositório do GitHub
-2. **Project Name:** `recipelens-api`
-3. **Root Directory:** `api`
-4. **Environment Variables:**
+1. Em https://vercel.com/new, importe o repositório **Sistema-Receitas**
+2. **Project Name:** `recipelens`
+3. **Root Directory:** deixe `./` (a raiz)
+4. **Application Preset:** **Services**. A Vercel lê o `vercel.json` e mostra `api` em `/api` e `web` em `/`.
+5. **Environment Variables:**
    - `JWT_SECRET`: um valor novo, longo e aleatório (não use o do seu computador). Para gerar:
      `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`
    - `GEMINI_API_KEY`: sua chave do Google AI Studio
    - `GEMINI_MODEL`: `gemini-3.8-flash`
    - `GEMINI_FALLBACK_MODELS`: `gemini-3.5-flash`
-   - `WEB_ORIGIN`: o endereço do site, ex: `https://recipelens.vercel.app`
-5. Clique em **Deploy**. O primeiro deploy vai falhar por falta de banco, e está tudo bem.
-6. No projeto, aba **Storage**:
-   - **Create Database → Neon** (plano Free) → conecte ao projeto
-   - **Create → Blob** → conecte ao projeto
-   - **Marketplace → Upstash for Redis** (plano Free) → conecte ao projeto
-7. Aba **Deployments** → no último deploy, **Redeploy**. O build roda `prisma migrate deploy` e cria as tabelas no Neon.
-8. Teste: abra `https://recipelens-api.vercel.app/health`. Deve aparecer `{"status":"ok","database":"ok"}`.
+6. Clique em **Deploy**. O primeiro deploy vai falhar por falta de banco, e está tudo bem.
 
-## 2. Projeto do site
+## 2. Ligar banco, arquivos e Redis
 
-1. Em https://vercel.com/new, importe **o mesmo repositório** de novo
-2. **Project Name:** `recipelens`
-3. **Root Directory:** `web` (a Vercel detecta o Vite sozinha)
-4. Confira o endereço da API em `web/vercel.json`. Se o projeto da API ganhou outro nome
-   (ex: `recipelens-api-abc.vercel.app`), troque lá, faça commit e push.
-5. Clique em **Deploy**
+No projeto, aba **Storage** (ou **Integrations / Marketplace**):
 
-Pronto: o site fica em `https://recipelens.vercel.app` (ou no nome que a Vercel der).
+1. **Neon** (Postgres) → plano **Free** → conecte ao projeto `recipelens`
+2. **Blob** → crie um store → conecte ao projeto
+3. **Upstash for Redis** → plano **Free** → conecte ao projeto
+
+Cada integração cria as variáveis sozinha.
+
+## 3. Publicar de novo
+
+Aba **Deployments** → no último deploy, **Redeploy**. O build da API roda `prisma migrate deploy`
+e cria as tabelas no Neon.
+
+Teste: `https://recipelens.vercel.app/api/health` deve mostrar `{"status":"ok","database":"ok"}`.
+Depois abra `https://recipelens.vercel.app`.
 
 ## Atualizações
 
-Cada `git push` na branch `main` publica as duas partes de novo, sozinho.
-Migrações novas do banco rodam automaticamente no deploy da API.
+Cada `git push` na branch `main` publica de novo, sozinho.
+Migrações novas do banco rodam automaticamente no deploy.
 
 ## Limites que já estão tratados no código
 
 - **Envios de até 4,5 MB:** fotos são reduzidas no navegador; PDFs até 4 MB
-- **Conexões de até 2 minutos pelo repasse do `/api`:** o feed e os comentários ao vivo reconectam sozinhos; a leitura com IA desiste em 100 segundos
+- **Funções de até 5 minutos no plano Hobby:** o feed e os comentários ao vivo reconectam sozinhos; a leitura com IA desiste em 100 segundos
 - **Várias cópias da API:** os avisos em tempo real passam pelo Redis (Upstash)

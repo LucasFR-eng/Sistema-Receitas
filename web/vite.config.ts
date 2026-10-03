@@ -7,11 +7,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // /api/recipes -> http://localhost:3333/recipes (igual ao vercel.json em produção)
+      // /api/... vai para a API em localhost:3333 (igual à Vercel, onde site e API dividem o endereço)
       "/api": {
         target: "http://localhost:3333",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
       },
     },
   },

@@ -52,7 +52,7 @@ npm run db:migrate        # cria as tabelas no banco
 npm run dev
 ```
 
-A API roda em http://localhost:3333. Teste em http://localhost:3333/health.
+A API roda em http://localhost:3333, com todas as rotas sob `/api`. Teste em http://localhost:3333/api/health.
 
 **3. Rode o front** (em outro terminal)
 
@@ -92,7 +92,7 @@ Veja o passo a passo para publicar de graça na Vercel em [DEPLOY.md](DEPLOY.md)
 docker compose --profile app up --build
 ```
 
-Front em http://localhost:8080 e API em http://localhost:3333.
+Acesse http://localhost:8080 (o front repassa `/api` para a API).
 
 ## Estrutura
 
