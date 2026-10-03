@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link, Navigate, useNavigate } from "react-router";
+import { Link, Navigate, useLocation, useNavigate } from "react-router";
 import { useAuth } from "../auth/AuthContext.tsx";
 import { AuthCard, FormError, SubmitButton } from "../components/AuthCard.tsx";
 import { TextField } from "../components/TextField.tsx";
@@ -8,12 +8,14 @@ import { ApiError, type FieldErrors } from "../lib/api.ts";
 export function LoginPage() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
+  // Página que a pessoa tentou abrir antes de ser mandada para o login
+  const from = (useLocation().state as { from?: string } | null)?.from ?? "/";
   const [form, setForm] = useState({ login: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to={from} replace />;
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -23,7 +25,7 @@ export function LoginPage() {
 
     try {
       await login(form.login, form.password);
-      navigate("/");
+      navigate(from, { replace: true });
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);

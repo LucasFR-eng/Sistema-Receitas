@@ -20,7 +20,13 @@ export function Header() {
         <nav className="flex items-center gap-2 text-sm">
           {user ? (
             <>
-              <span className="hidden text-stone-600 sm:inline">@{user.username}</span>
+              <Link
+                to="/minhas-receitas"
+                className="rounded-lg px-3 py-2 font-medium text-stone-700 transition hover:bg-stone-200"
+              >
+                Minhas receitas
+              </Link>
+              <span className="hidden text-stone-600 md:inline">@{user.username}</span>
               <button
                 type="button"
                 onClick={handleLogout}

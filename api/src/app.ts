@@ -1,18 +1,28 @@
 import cors from "@fastify/cors";
+import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
+import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyError } from "fastify";
 import { z, ZodError } from "zod";
 import { env } from "./env.js";
 import { Prisma } from "./generated/prisma/client.js";
 import { setupAuth } from "./lib/auth.js";
+import { UPLOAD_ROOT, UPLOAD_URL_PREFIX } from "./lib/storage.js";
 import { authRoutes } from "./routes/auth.js";
 import { healthRoutes } from "./routes/health.js";
+import { recipeRoutes } from "./routes/recipes.js";
+import { MAX_IMAGE_MB, uploadRoutes } from "./routes/uploads.js";
 
 export function buildApp() {
   const app = Fastify({ logger: true });
 
   // credentials: true permite que o navegador envie o cookie de login para a API
-  app.register(cors, { origin: env.WEB_ORIGIN, credentials: true });
+  // methods: por padrão o CORS só libera GET/HEAD/POST; editar (PUT) e excluir (DELETE) precisam estar na lista
+  app.register(cors, {
+    origin: env.WEB_ORIGIN,
+    credentials: true,
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"],
+  });
   app.register(rateLimit, {
     global: false,
     errorResponseBuilder: () => ({
@@ -21,6 +31,9 @@ export function buildApp() {
     }),
   });
   setupAuth(app);
+  app.register(multipart, { limits: { fileSize: MAX_IMAGE_MB * 1024 * 1024, files: 1 } });
+  // Serve as imagens enviadas em /uploads/nome-do-arquivo.jpg
+  app.register(fastifyStatic, { root: UPLOAD_ROOT, prefix: UPLOAD_URL_PREFIX });
 
   app.setErrorHandler((error: FastifyError, request, reply) => {
     // Dados enviados não passaram na validação do zod
@@ -46,6 +59,8 @@ export function buildApp() {
 
   app.register(healthRoutes);
   app.register(authRoutes);
+  app.register(uploadRoutes);
+  app.register(recipeRoutes);
 
   return app;
 }

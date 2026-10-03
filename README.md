@@ -19,6 +19,21 @@ Fotografe uma receita (ou envie um PDF) e a IA escreve para você. Organize suas
 
 ## Como rodar em desenvolvimento
 
+### Jeito rápido (um terminal só)
+
+Com o Docker Desktop aberto, na pasta raiz do projeto:
+
+```bash
+npm run setup   # só na primeira vez: instala as dependências da raiz, da API e do front
+npm run dev     # sobe o banco, a API e o front juntos
+```
+
+Acesse http://localhost:5173. Para parar tudo, aperte `Ctrl + C`.
+
+Na primeira vez, configure também o `api/.env` (veja o passo 2 abaixo) e crie as tabelas com `npm --prefix api run db:migrate`.
+
+### Passo a passo (cada parte num terminal)
+
 **1. Suba o banco de dados**
 
 ```bash

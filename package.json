@@ -1,0 +1,13 @@
+{
+  "name": "recipelens",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "setup": "npm install && npm --prefix api install && npm --prefix web install",
+    "db": "docker compose up -d db",
+    "dev": "npm run db && concurrently --names api,web --prefix-colors blue,green --kill-others-on-fail \"npm --prefix api run dev\" \"npm --prefix web run dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}

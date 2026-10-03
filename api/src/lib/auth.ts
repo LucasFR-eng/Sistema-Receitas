@@ -35,6 +35,16 @@ export function setupAuth(app: FastifyInstance) {
   });
 }
 
+// Para rotas onde o login é opcional: devolve o id do usuário ou null
+export async function getUserId(request: FastifyRequest): Promise<string | null> {
+  try {
+    await request.jwtVerify();
+    return request.user.sub;
+  } catch {
+    return null;
+  }
+}
+
 export async function startSession(reply: FastifyReply, userId: string) {
   const token = await reply.jwtSign({ sub: userId });
   reply.setCookie(AUTH_COOKIE, token, authCookieOptions);

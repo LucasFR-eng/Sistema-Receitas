@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { endSession, startSession } from "../lib/auth.js";
+import { endSession, getUserId, startSession } from "../lib/auth.js";
 import { hashPassword, verifyPassword } from "../lib/password.js";
 import { prisma } from "../lib/prisma.js";
 
@@ -105,14 +105,11 @@ export async function authRoutes(app: FastifyInstance) {
 
   // Devolve o usuário logado, ou user: null se não houver sessão válida
   app.get("/auth/me", async (request, reply) => {
-    try {
-      await request.jwtVerify();
-    } catch {
-      return { user: null };
-    }
+    const userId = await getUserId(request);
+    if (!userId) return { user: null };
 
     const user = await prisma.user.findUnique({
-      where: { id: request.user.sub },
+      where: { id: userId },
       select: publicUserSelect,
     });
 
