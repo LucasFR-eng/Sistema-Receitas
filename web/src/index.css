@@ -13,3 +13,25 @@
 body {
   @apply bg-stone-50 text-stone-900 antialiased;
 }
+
+/* Receita que acabou de chegar pelo feed em tempo real */
+@keyframes recipe-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.recipe-arrive {
+  animation: recipe-arrive 0.5s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recipe-arrive {
+    animation: none;
+  }
+}

@@ -10,6 +10,7 @@ import { setupAuth } from "./lib/auth.js";
 import { UPLOAD_ROOT, UPLOAD_URL_PREFIX } from "./lib/storage.js";
 import { authRoutes } from "./routes/auth.js";
 import { AIError } from "./ai/types.js";
+import { feedRoutes } from "./routes/feed.js";
 import { healthRoutes } from "./routes/health.js";
 import { importRoutes, MAX_IMPORT_MB } from "./routes/imports.js";
 import { recipeRoutes } from "./routes/recipes.js";
@@ -72,6 +73,7 @@ export function buildApp() {
   app.register(uploadRoutes);
   app.register(recipeRoutes);
   app.register(importRoutes);
+  app.register(feedRoutes);
 
   return app;
 }

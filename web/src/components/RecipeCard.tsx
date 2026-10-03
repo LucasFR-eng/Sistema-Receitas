@@ -13,7 +13,7 @@ export function RecipeCard({ recipe, showStatus = false }: { recipe: RecipeSumma
   return (
     <Link
       to={`/receitas/${recipe.id}`}
-      className="group flex flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-stone-200 transition hover:shadow-md hover:ring-stone-300"
+      className="group flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-stone-200 transition hover:shadow-md hover:ring-stone-300"
     >
       <div className="aspect-[4/3] bg-brand-50">
         {recipe.photoUrl ? (

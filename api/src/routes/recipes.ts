@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { Prisma } from "../generated/prisma/client.js";
 import { getUserId } from "../lib/auth.js";
 import { RECIPE_CATEGORIES } from "../lib/categories.js";
+import { publishFeedEvent } from "../lib/feed-events.js";
 import { prisma } from "../lib/prisma.js";
 import { normalizeText } from "../lib/text.js";
 
@@ -135,6 +136,19 @@ function buildSteps(steps: RecipeInput["steps"]) {
 
 const notFound = { message: "Receita não encontrada" };
 
+const isPublicRecipe = (recipe: { status: string; visibility: string }) =>
+  recipe.status === "PUBLISHED" && recipe.visibility === "PUBLIC";
+
+// Avisa quem está com o feed aberto: receita nova no feed, alterada ou que saiu dele
+async function notifyFeed(id: string, wasPublic: boolean) {
+  const recipe = await prisma.recipe.findUnique({ where: { id }, select: recipeSummarySelect });
+  const nowPublic = recipe !== null && isPublicRecipe(recipe);
+
+  if (nowPublic && !wasPublic) publishFeedEvent({ type: "recipe:published", recipe });
+  else if (nowPublic) publishFeedEvent({ type: "recipe:updated", recipe });
+  else if (wasPublic) publishFeedEvent({ type: "recipe:removed", id });
+}
+
 export async function recipeRoutes(app: FastifyInstance) {
   // Feed público: receitas publicadas e públicas, das mais novas para as mais antigas
   app.get("/recipes", async (request) => {
@@ -240,6 +254,7 @@ export async function recipeRoutes(app: FastifyInstance) {
       });
     }
 
+    await notifyFeed(recipe.id, false);
     return reply.status(201).send({ recipe });
   });
 
@@ -248,7 +263,10 @@ export async function recipeRoutes(app: FastifyInstance) {
     if (!parsed.success) return reply.status(404).send(notFound);
     const { id } = parsed.data;
 
-    const existing = await prisma.recipe.findUnique({ where: { id }, select: { userId: true } });
+    const existing = await prisma.recipe.findUnique({
+      where: { id },
+      select: { userId: true, status: true, visibility: true },
+    });
     if (!existing || existing.userId !== request.user.sub) return reply.status(404).send(notFound);
 
     const {
@@ -274,6 +292,7 @@ export async function recipeRoutes(app: FastifyInstance) {
       select: { id: true },
     });
 
+    await notifyFeed(id, isPublicRecipe(existing));
     return { recipe };
   });
 
@@ -282,10 +301,14 @@ export async function recipeRoutes(app: FastifyInstance) {
     if (!parsed.success) return reply.status(404).send(notFound);
     const { id } = parsed.data;
 
-    const existing = await prisma.recipe.findUnique({ where: { id }, select: { userId: true } });
+    const existing = await prisma.recipe.findUnique({
+      where: { id },
+      select: { userId: true, status: true, visibility: true },
+    });
     if (!existing || existing.userId !== request.user.sub) return reply.status(404).send(notFound);
 
     await prisma.recipe.delete({ where: { id } });
+    if (isPublicRecipe(existing)) publishFeedEvent({ type: "recipe:removed", id });
     return reply.status(204).send();
   });
 }
