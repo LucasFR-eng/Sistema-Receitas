@@ -1,8 +1,16 @@
 import { z } from "zod";
 import { RECIPE_CATEGORIES } from "../lib/categories.js";
 
+// Como a IA classifica o que recebeu; só RECIPE segue adiante
+export const CONTENT_TYPES = ["RECIPE", "NOT_RECIPE", "INAPPROPRIATE"] as const;
+
 // Formato que qualquer provedor de IA deve devolver ao ler uma receita.
 export const extractedRecipeSchema = z.object({
+  contentType: z
+    .enum(CONTENT_TYPES)
+    .describe(
+      "RECIPE se for uma receita culinária; NOT_RECIPE se for outra coisa; INAPPROPRIATE se tiver conteúdo sexual, violento, ofensivo ou ilegal",
+    ),
   name: z.string().describe("Nome da receita. Vazio se o conteúdo não for uma receita"),
   description: z.string().nullable().describe("Descrição curta, se houver"),
   category: z
@@ -27,6 +35,23 @@ export const extractedRecipeSchema = z.object({
 });
 
 export type ExtractedRecipe = z.infer<typeof extractedRecipeSchema>;
+
+// Resultado vazio para conteúdo recusado (ex: bloqueado pelo filtro de segurança do provedor)
+export function rejectedResult(contentType: Exclude<ExtractedRecipe["contentType"], "RECIPE">): ExtractedRecipe {
+  return {
+    contentType,
+    name: "",
+    description: null,
+    category: null,
+    prepMinutes: null,
+    servings: null,
+    difficulty: null,
+    ingredients: [],
+    steps: [],
+    rawText: "",
+    warnings: [],
+  };
+}
 
 // O que pode ser enviado para a IA: um arquivo (foto/PDF) ou um texto
 export type RecipeSource =

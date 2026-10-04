@@ -1,9 +1,15 @@
-import { ApiError, GoogleGenAI, type Part } from "@google/genai";
+import { ApiError, GoogleGenAI, type GenerateContentResponse, type Part } from "@google/genai";
 import { setTimeout as sleep } from "node:timers/promises";
 import { z } from "zod";
 import { EXTRACT_FROM_FILE_PROMPT, EXTRACT_FROM_TEXT_PROMPT } from "./prompts.js";
 import type { AIProvider } from "./provider.js";
-import { AIError, extractedRecipeSchema, type ExtractedRecipe, type RecipeSource } from "./types.js";
+import {
+  AIError,
+  extractedRecipeSchema,
+  rejectedResult,
+  type ExtractedRecipe,
+  type RecipeSource,
+} from "./types.js";
 
 const responseJsonSchema = z.toJSONSchema(extractedRecipeSchema);
 
@@ -13,6 +19,19 @@ const RETRY_DELAYS_MS = [1_000, 3_000];
 // Tempo máximo somando todas as tentativas. Na Vercel, o repasse do front para a API
 // corta a conexão em 2 minutos; é melhor desistir antes e responder com uma mensagem clara.
 const TOTAL_TIMEOUT_MS = 100_000;
+
+// Motivos com que o filtro de segurança do Gemini recusa o conteúdo enviado ou a resposta
+const SAFETY_REASONS = new Set([
+  "SAFETY",
+  "BLOCKLIST",
+  "PROHIBITED_CONTENT",
+  "IMAGE_SAFETY",
+  "IMAGE_PROHIBITED_CONTENT",
+]);
+
+const wasBlocked = (response: GenerateContentResponse) =>
+  SAFETY_REASONS.has(response.promptFeedback?.blockReason ?? "") ||
+  SAFETY_REASONS.has(response.candidates?.[0]?.finishReason ?? "");
 
 const isTemporary = (error: unknown) =>
   error instanceof ApiError && (error.status === 500 || error.status === 503);
@@ -47,8 +66,11 @@ export class GeminiProvider implements AIProvider {
           ]
         : [{ text: EXTRACT_FROM_TEXT_PROMPT }, { text: source.text }];
 
-    const text = await this.generate(parts);
+    const response = await this.generate(parts);
+    // Bloqueado pelo filtro de segurança: trata como conteúdo inapropriado em vez de erro
+    if (wasBlocked(response)) return rejectedResult("INAPPROPRIATE");
 
+    const text = response.text;
     const parsed = extractedRecipeSchema.safeParse(text ? safeJson(text) : null);
     if (!parsed.success) {
       throw new AIError("A IA devolveu uma resposta inválida. Tente novamente.", "INVALID_OUTPUT", {
@@ -59,7 +81,7 @@ export class GeminiProvider implements AIProvider {
   }
 
   // Tenta cada modelo (principal e reservas), repetindo quando o erro é temporário
-  private async generate(parts: Part[]): Promise<string | undefined> {
+  private async generate(parts: Part[]): Promise<GenerateContentResponse> {
     const client = this.getClient();
     // Cancela a chamada em andamento quando o tempo total acaba
     const deadline = AbortSignal.timeout(TOTAL_TIMEOUT_MS);
@@ -68,12 +90,11 @@ export class GeminiProvider implements AIProvider {
     for (const model of this.models) {
       for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
         try {
-          const response = await client.models.generateContent({
+          return await client.models.generateContent({
             model,
             contents: [{ role: "user", parts }],
             config: { responseMimeType: "application/json", responseJsonSchema, abortSignal: deadline },
           });
-          return response.text;
         } catch (error) {
           lastError = error;
           if (deadline.aborted) {

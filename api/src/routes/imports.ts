@@ -70,7 +70,7 @@ interface ImportRequest {
   type: "IMAGE" | "PDF" | "TEXT";
   hash: string;
   source: RecipeSource;
-  // Salva o arquivo só quando a IA realmente vai ser usada
+  // Salva o arquivo só quando a IA confirma que é uma receita
   saveSourceFile?: () => Promise<string>;
 }
 
@@ -107,19 +107,20 @@ async function runImport({ userId, type, hash, source, saveSourceFile }: ImportR
   if (usage.remaining <= 0) throw new ImportLimitError();
 
   // 3. Registra a importação e chama a IA
-  const fileUrl = saveSourceFile ? await saveSourceFile() : null;
   const record = await prisma.recipeImport.create({
-    data: { userId, type, fileHash: hash, fileUrl },
-    select: { id: true, fileUrl: true },
+    data: { userId, type, fileHash: hash },
+    select: { id: true },
   });
 
   try {
     const result = await getAIProvider().extractRecipe(source);
+    // O arquivo fica público no armazenamento: só é salvo depois que a IA confirma que é uma receita
+    const fileUrl = result.contentType === "RECIPE" && saveSourceFile ? await saveSourceFile() : null;
     await prisma.recipeImport.update({
       where: { id: record.id },
-      data: { status: "DONE", aiResult: result, aiWarnings: result.warnings },
+      data: { status: "DONE", fileUrl, aiResult: result, aiWarnings: result.warnings },
     });
-    return { record, result, fromCache: false };
+    return { record: { id: record.id, fileUrl }, result, fromCache: false };
   } catch (error) {
     await prisma.recipeImport.update({
       where: { id: record.id },
@@ -155,7 +156,18 @@ export async function importRoutes(app: FastifyInstance) {
     const draft = toDraft(result);
     const usage = await getUsage(request.userId);
 
-    if (!draft.name && draft.ingredients.length === 0 && draft.steps.length === 0) {
+    // Recusas contam no limite mensal (a IA foi usada), para ninguém mandar qualquer coisa sem custo
+    if (result.contentType === "INAPPROPRIATE") {
+      return reply.status(422).send({
+        message: "Esse conteúdo não é permitido. Envie apenas receitas culinárias.",
+        usage,
+      });
+    }
+
+    if (
+      result.contentType === "NOT_RECIPE" ||
+      (!draft.name && draft.ingredients.length === 0 && draft.steps.length === 0)
+    ) {
       return reply.status(422).send({
         message: "Não encontramos uma receita aqui. Tente uma foto mais nítida ou outro arquivo.",
         warnings: result.warnings,
