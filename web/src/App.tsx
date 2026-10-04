@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router";
 import { AuthProvider } from "./auth/AuthContext.tsx";
 import { Header } from "./components/Header.tsx";
+import { InstallPrompt } from "./components/InstallPrompt.tsx";
 import { RequireAuth } from "./components/RequireAuth.tsx";
 import { EditProfilePage } from "./pages/EditProfilePage.tsx";
 import { EditRecipePage } from "./pages/EditRecipePage.tsx";
@@ -77,6 +78,7 @@ export default function App() {
             />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
+          <InstallPrompt />
         </div>
       </AuthProvider>
     </BrowserRouter>
