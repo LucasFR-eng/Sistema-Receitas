@@ -7,8 +7,8 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    // Migrações precisam da conexão direta do banco. No Neon, a integração da Vercel cria
-    // DATABASE_URL (com pool, usada pelo app) e DATABASE_URL_UNPOOLED (direta, usada aqui).
+    // Migrações não funcionam pelo pool em modo transação. No Supabase, DATABASE_URL é o
+    // Transaction pooler (usado pelo app) e DATABASE_URL_UNPOOLED o Session pooler (usado aqui).
     url: process.env.DATABASE_URL_UNPOOLED ?? env("DATABASE_URL"),
   },
 });

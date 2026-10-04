@@ -14,7 +14,7 @@ Serviços gratuitos ligados ao projeto pelo painel da Vercel:
 
 | Serviço | Para quê | Variável que cria |
 |---|---|---|
-| **Neon** (Postgres) | Banco de dados | `DATABASE_URL`, `DATABASE_URL_UNPOOLED` |
+| **Supabase** (Postgres) | Banco de dados | `DATABASE_URL`, `DATABASE_URL_UNPOOLED` (cadastradas à mão, veja o passo 2) |
 | **Vercel Blob** (acesso **Public**) | Fotos e PDFs | `BLOB_STORE_ID` (autenticação automática OIDC) |
 | **Upstash** (Redis) | Avisos em tempo real entre as cópias da API | `REDIS_URL` (ou `KV_URL`) |
 
@@ -36,18 +36,29 @@ Serviços gratuitos ligados ao projeto pelo painel da Vercel:
 
 ## 2. Ligar banco, arquivos e Redis
 
-No projeto, aba **Storage** (ou **Integrations / Marketplace**):
+**Banco (Supabase):**
 
-1. **Neon** (Postgres) → plano **Free** → conecte ao projeto `recipelens`
-2. **Blob** → crie um store com acesso **Public** (as fotos precisam abrir para qualquer visitante) → conecte ao projeto
-3. **Upstash for Redis** → plano **Free** → conecte ao projeto
+1. Em https://supabase.com crie um projeto no plano **Free**, região **South America (São Paulo)**, e guarde a senha do banco
+2. No projeto, botão **Connect** → copie duas conexões (troque `[YOUR-PASSWORD]` pela senha):
+   - **Transaction pooler** (porta `6543`) → na Vercel, variável `DATABASE_URL`, com `?sslmode=no-verify` no final.
+     É a que o app usa. `no-verify` mantém a conexão criptografada; sem ele a biblioteca `pg` recusa o certificado do Supabase
+   - **Session pooler** (porta `5432`) → na Vercel, variável `DATABASE_URL_UNPOOLED`, com `?sslmode=require` no final.
+     É a que as migrações usam. Não use a "Direct connection": no plano Free ela só aceita IPv6, e a Vercel não conecta por IPv6
+3. Cadastre as duas em **Settings → Environment Variables** (Production e Preview)
 
-Cada integração cria as variáveis sozinha.
+> No plano Free, o Supabase **pausa o projeto depois de 7 dias sem nenhum acesso**. Para reativar: painel do Supabase → **Restore project**.
+
+**Arquivos e Redis**, na aba **Storage** (ou **Integrations / Marketplace**):
+
+1. **Blob** → crie um store com acesso **Public** (as fotos precisam abrir para qualquer visitante) → conecte ao projeto
+2. **Upstash for Redis** → plano **Free** → conecte ao projeto
+
+Essas integrações criam as variáveis sozinhas.
 
 ## 3. Publicar de novo
 
 Aba **Deployments** → no último deploy, **Redeploy**. O build da API roda `prisma migrate deploy`
-e cria as tabelas no Neon.
+e cria as tabelas no Supabase.
 
 Teste: `https://SEU-DOMINIO.vercel.app/api/health` deve mostrar `{"status":"ok","database":"ok"}`
 (o domínio aparece em **Domains** no painel; se o nome já existir, a Vercel acrescenta um sufixo).
