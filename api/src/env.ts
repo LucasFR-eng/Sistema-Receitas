@@ -32,8 +32,10 @@ const envSchema = z.object({
         .map((model) => model.trim())
         .filter(Boolean),
     ),
-  // Quantas leituras com IA cada usuário pode fazer por mês (reaproveitamentos não contam)
+  // Quantas leituras com IA cada usuário pode fazer por mês (reaproveitamentos não contam).
+  // Plano 0 (gratuito) usa IMPORT_MONTHLY_LIMIT, plano 1 (premium) usa o _PREMIUM; plano 2 não tem limite
   IMPORT_MONTHLY_LIMIT: z.coerce.number().int().min(0).default(30),
+  IMPORT_MONTHLY_LIMIT_PREMIUM: z.coerce.number().int().min(0).default(200),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -21,17 +21,27 @@ const textSchema = z.object({
     .max(20_000, "Texto muito longo"),
 });
 
+// Leituras com IA por mês de cada plano do usuário (null = ilimitado)
+function monthlyLimit(plan: number): number | null {
+  if (plan === 2) return null;
+  if (plan === 1) return env.IMPORT_MONTHLY_LIMIT_PREMIUM;
+  return env.IMPORT_MONTHLY_LIMIT;
+}
+
 async function getUsage(userId: string) {
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  // Conta só leituras que usaram a IA de verdade (reaproveitadas e com erro não contam)
-  const used = await prisma.recipeImport.count({
-    where: { userId, fromCache: false, status: { not: "FAILED" }, createdAt: { gte: startOfMonth } },
-  });
-  const limit = env.IMPORT_MONTHLY_LIMIT;
-  return { used, limit, remaining: Math.max(0, limit - used) };
+  const [used, user] = await Promise.all([
+    // Conta só leituras que usaram a IA de verdade (reaproveitadas e com erro não contam)
+    prisma.recipeImport.count({
+      where: { userId, fromCache: false, status: { not: "FAILED" }, createdAt: { gte: startOfMonth } },
+    }),
+    prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { plan: true } }),
+  ]);
+  const limit = monthlyLimit(user.plan);
+  return { used, limit, remaining: limit === null ? null : Math.max(0, limit - used) };
 }
 
 const sha256 = (data: Buffer | string) => createHash("sha256").update(data).digest("hex");
@@ -74,7 +84,11 @@ interface ImportRequest {
   saveSourceFile?: () => Promise<string>;
 }
 
-class ImportLimitError extends Error {}
+class ImportLimitError extends Error {
+  constructor(public readonly limit: number) {
+    super();
+  }
+}
 
 async function runImport({ userId, type, hash, source, saveSourceFile }: ImportRequest) {
   // 1. Mesmo conteúdo já lido antes? Reaproveita o resultado sem chamar a IA
@@ -104,7 +118,7 @@ async function runImport({ userId, type, hash, source, saveSourceFile }: ImportR
 
   // 2. Limite mensal
   const usage = await getUsage(userId);
-  if (usage.remaining <= 0) throw new ImportLimitError();
+  if (usage.limit !== null && usage.remaining === 0) throw new ImportLimitError(usage.limit);
 
   // 3. Registra a importação e chama a IA
   const record = await prisma.recipeImport.create({
@@ -146,7 +160,7 @@ export async function importRoutes(app: FastifyInstance) {
     } catch (error) {
       if (error instanceof ImportLimitError) {
         return reply.status(429).send({
-          message: `Você usou as ${env.IMPORT_MONTHLY_LIMIT} leituras com IA deste mês. O limite renova no dia 1º.`,
+          message: `Você usou as ${error.limit} leituras com IA deste mês. O limite renova no dia 1º.`,
         });
       }
       throw error;

@@ -133,9 +133,11 @@ export function ImportPanel({ onImported }: { onImported: (response: ImportRespo
 
       {usage && (
         <p className="mt-4 text-center text-sm text-stone-500">
-          {noCredits
-            ? "Você usou todas as leituras com IA deste mês. O limite renova no dia 1º."
-            : `Você tem ${usage.remaining} de ${usage.limit} leituras com IA este mês.`}
+          {usage.limit === null
+            ? "Seu plano tem leituras com IA ilimitadas."
+            : noCredits
+              ? "Você usou todas as leituras com IA deste mês. O limite renova no dia 1º."
+              : `Você tem ${usage.remaining} de ${usage.limit} leituras com IA este mês.`}
         </p>
       )}
     </div>

@@ -83,8 +83,9 @@ export interface RecipeDraft {
 
 export interface ImportUsage {
   used: number;
-  limit: number;
-  remaining: number;
+  // null no plano ilimitado
+  limit: number | null;
+  remaining: number | null;
 }
 
 export interface ImportResponse {
