@@ -12,6 +12,8 @@ const publicUserSelect = {
   email: true,
   avatarUrl: true,
   bio: true,
+  // Só para o próprio usuário: o front mostra os botões de administrador
+  isAdmin: true,
   createdAt: true,
 } as const;
 

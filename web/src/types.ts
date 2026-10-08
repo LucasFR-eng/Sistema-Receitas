@@ -5,11 +5,13 @@ export interface User {
   email: string;
   avatarUrl: string | null;
   bio: string | null;
+  // Administrador: pode excluir qualquer receita ou usuário (só muda pelo banco)
+  isAdmin: boolean;
   createdAt: string;
 }
 
 // Perfil que qualquer pessoa pode ver (sem e-mail)
-export type PublicProfile = Omit<User, "email">;
+export type PublicProfile = Omit<User, "email" | "isAdmin">;
 
 export interface ProfileResponse {
   user: PublicProfile;

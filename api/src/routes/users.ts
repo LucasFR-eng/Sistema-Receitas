@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { getUserId } from "../lib/auth.js";
+import { getUserId, isAdmin } from "../lib/auth.js";
+import { publishFeedEvent } from "../lib/feed-events.js";
 import { prisma } from "../lib/prisma.js";
 import { findRecipePage } from "../lib/recipe-queries.js";
 import { isOwnImageUrl } from "../lib/storage.js";
@@ -83,8 +84,30 @@ export async function userRoutes(app: FastifyInstance) {
     const user = await prisma.user.update({
       where: { id: request.user.sub },
       data,
-      select: { ...publicProfileSelect, email: true },
+      select: { ...publicProfileSelect, email: true, isAdmin: true },
     });
     return { user };
+  });
+
+  // Administrador exclui um usuário e tudo dele (receitas, comentários, favoritos, leituras com IA)
+  app.delete("/users/:username", { onRequest: [app.authenticate] }, async (request, reply) => {
+    if (!(await isAdmin(request.user.sub))) {
+      return reply.status(403).send({ message: "Só administradores podem excluir usuários" });
+    }
+    const parsed = usernameParamsSchema.safeParse(request.params);
+    if (!parsed.success) return reply.status(404).send(notFound);
+
+    const user = await prisma.user.findUnique({ where: { username: parsed.data.username }, select: { id: true } });
+    if (!user) return reply.status(404).send(notFound);
+    if (user.id === request.user.sub) {
+      return reply.status(400).send({ message: "Você não pode excluir a própria conta por aqui" });
+    }
+
+    // Guarda as receitas públicas antes de apagar, para tirá-las do feed de quem está com ele aberto
+    const publicRecipes = await prisma.recipe.findMany({ where: publicRecipesOf(user.id), select: { id: true } });
+    // As receitas, comentários, favoritos e leituras saem junto (onDelete: Cascade no schema)
+    await prisma.user.delete({ where: { id: user.id } });
+    for (const recipe of publicRecipes) publishFeedEvent({ type: "recipe:removed", id: recipe.id });
+    return reply.status(204).send();
   });
 }

@@ -2,6 +2,7 @@ import fastifyCookie from "@fastify/cookie";
 import fastifyJwt from "@fastify/jwt";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { env } from "../env.js";
+import { prisma } from "./prisma.js";
 
 export const AUTH_COOKIE = "rl_token";
 
@@ -43,6 +44,12 @@ export async function getUserId(request: FastifyRequest): Promise<string | null>
   } catch {
     return null;
   }
+}
+
+// Confere no banco a cada pedido (e não no token): tirar o admin de alguém pelo banco vale na hora
+export async function isAdmin(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { isAdmin: true } });
+  return user?.isAdmin ?? false;
 }
 
 export async function startSession(reply: FastifyReply, userId: string) {

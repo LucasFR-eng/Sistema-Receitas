@@ -50,6 +50,8 @@ model User {
   // Plano: 0 = gratuito (padrão de quem se cadastra), 1 = premium (mais leituras com IA), 2 = ilimitado.
   // O banco só aceita 0, 1 ou 2 (restrição users_plan_check na migração)
   plan         Int      @default(0)
+  // Administrador: pode excluir qualquer receita ou usuário. Só muda direto pelo banco (o app nunca altera)
+  isAdmin      Boolean  @default(false) @map("is_admin")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
+import { useAuth } from "../auth/AuthContext.tsx";
 import { Avatar } from "../components/Avatar.tsx";
 import { RecipeCard } from "../components/RecipeCard.tsx";
 import { PageLoading } from "../components/RequireAuth.tsx";
@@ -16,6 +17,9 @@ const joinedFormat = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "nu
 
 export function ProfilePage() {
   const { username = "" } = useParams();
+  const navigate = useNavigate();
+  const { user: viewer } = useAuth();
+  const [deleting, setDeleting] = useState(false);
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -62,6 +66,25 @@ export function ProfilePage() {
     }
   }
 
+  // Administrador exclui o usuário e tudo dele
+  async function deleteUser() {
+    if (
+      !window.confirm(
+        `Excluir o usuário @${username}? As receitas, comentários e favoritos dele também serão apagados. Essa ação não pode ser desfeita.`,
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await api(`/users/${username}`, { method: "DELETE" });
+      navigate("/");
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : "Não foi possível excluir o usuário");
+      setDeleting(false);
+    }
+  }
+
   if (notFound) return <NotFoundPage />;
   if (error) return <p className="px-4 py-20 text-center text-red-600">{error}</p>;
   if (!profile) return <PageLoading />;
@@ -99,6 +122,16 @@ export function ProfilePage() {
             >
               Editar perfil
             </Link>
+          )}
+          {!isMe && viewer?.isAdmin && (
+            <button
+              type="button"
+              onClick={deleteUser}
+              disabled={deleting}
+              className="rounded-lg px-4 py-2 text-sm font-medium text-red-700 ring-1 ring-red-200 transition hover:bg-red-50 disabled:opacity-60"
+            >
+              {deleting ? "Excluindo…" : "🛡️ Excluir usuário (admin)"}
+            </button>
           )}
         </div>
       </section>

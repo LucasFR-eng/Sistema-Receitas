@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
+import { useAuth } from "../auth/AuthContext.tsx";
 import { Avatar } from "../components/Avatar.tsx";
 import { CommentsSection } from "../components/CommentsSection.tsx";
 import { FavoriteButton } from "../components/FavoriteButton.tsx";
@@ -13,6 +14,7 @@ import { NotFoundPage } from "./NotFoundPage.tsx";
 export function RecipeDetailPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { data, loading, notFound, error } = useRecipe(id);
   // Ingredientes marcados enquanto a pessoa cozinha
   const [checked, setChecked] = useState<Set<string>>(new Set());
@@ -23,6 +25,8 @@ export function RecipeDetailPage() {
   if (error || !data) return <p className="px-4 py-20 text-center text-red-600">{error}</p>;
 
   const { recipe, isOwner } = data;
+  // Administrador pode excluir a receita de qualquer pessoa (mas não editar)
+  const adminDelete = !isOwner && user?.isAdmin === true;
 
   function toggle(ingredientId: string) {
     setChecked((current) => {
@@ -34,11 +38,12 @@ export function RecipeDetailPage() {
   }
 
   async function handleDelete() {
-    if (!window.confirm(`Excluir "${recipe.name}"? Essa ação não pode ser desfeita.`)) return;
+    const who = adminDelete ? ` de @${recipe.user.username}` : "";
+    if (!window.confirm(`Excluir "${recipe.name}"${who}? Essa ação não pode ser desfeita.`)) return;
     setDeleting(true);
     try {
       await api(`/recipes/${recipe.id}`, { method: "DELETE" });
-      navigate("/minhas-receitas");
+      navigate(adminDelete ? "/" : "/minhas-receitas");
     } catch (err) {
       window.alert(err instanceof ApiError ? err.message : "Não foi possível excluir");
       setDeleting(false);
@@ -130,6 +135,16 @@ export function RecipeDetailPage() {
                 {deleting ? "Excluindo…" : "Excluir"}
               </button>
             </>
+          )}
+          {adminDelete && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="rounded-lg px-4 py-2 text-sm font-medium text-red-700 ring-1 ring-red-200 transition hover:bg-red-50 disabled:opacity-60"
+            >
+              {deleting ? "Excluindo…" : "🛡️ Excluir (admin)"}
+            </button>
           )}
         </div>
       </div>

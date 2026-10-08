@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { Prisma } from "../generated/prisma/client.js";
-import { getUserId } from "../lib/auth.js";
+import { getUserId, isAdmin } from "../lib/auth.js";
 import { RECIPE_CATEGORIES } from "../lib/categories.js";
 import { publishFeedEvent } from "../lib/feed-events.js";
 import { prisma } from "../lib/prisma.js";
@@ -312,7 +312,11 @@ export async function recipeRoutes(app: FastifyInstance) {
       where: { id },
       select: { userId: true, status: true, visibility: true },
     });
-    if (!existing || existing.userId !== request.user.sub) return reply.status(404).send(notFound);
+    if (!existing) return reply.status(404).send(notFound);
+    // Quem pode excluir: o autor ou um administrador
+    if (existing.userId !== request.user.sub && !(await isAdmin(request.user.sub))) {
+      return reply.status(404).send(notFound);
+    }
 
     await prisma.recipe.delete({ where: { id } });
     if (isPublicRecipe(existing)) publishFeedEvent({ type: "recipe:removed", id });
