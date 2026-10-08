@@ -1,8 +1,9 @@
-import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "../auth/AuthContext.tsx";
 import { FormError, SubmitButton } from "../components/AuthCard.tsx";
 import { Avatar } from "../components/Avatar.tsx";
+import { PhotoPickerButtons } from "../components/PhotoPickerButtons.tsx";
 import { TextField } from "../components/TextField.tsx";
 import { api, ApiError, uploadImage, type FieldErrors } from "../lib/api.ts";
 import type { User } from "../types.ts";
@@ -21,7 +22,6 @@ export function EditProfilePage() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const fileInput = useRef<HTMLInputElement>(null);
 
   async function handlePhoto(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -79,14 +79,12 @@ export function EditProfilePage() {
           <div className="mt-2 flex items-center gap-4">
             <Avatar name={name || user!.name} avatarUrl={avatarUrl} size="lg" />
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => fileInput.current?.click()}
-                disabled={uploading}
-                className="rounded-lg bg-white px-3 py-2 text-sm font-medium text-stone-700 shadow-sm ring-1 ring-stone-300 transition hover:bg-stone-50 disabled:opacity-60"
-              >
-                {uploading ? "Enviando…" : avatarUrl ? "Trocar foto" : "Escolher foto"}
-              </button>
+              <PhotoPickerButtons
+                hasPhoto={Boolean(avatarUrl)}
+                uploading={uploading}
+                camera="user"
+                onChange={handlePhoto}
+              />
               {avatarUrl && (
                 <button
                   type="button"
@@ -97,13 +95,6 @@ export function EditProfilePage() {
                 </button>
               )}
             </div>
-            <input
-              ref={fileInput}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handlePhoto}
-              className="hidden"
-            />
           </div>
           <p className={`mt-1 text-sm ${fieldErrors.avatarUrl ? "text-red-600" : "text-stone-500"}`}>
             {fieldErrors.avatarUrl?.[0] ?? "JPG, PNG ou WEBP"}

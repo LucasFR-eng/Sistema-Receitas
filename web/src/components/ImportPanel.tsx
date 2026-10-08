@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type MouseEvent } from "react";
 import { ApiError } from "../lib/api.ts";
-import { MAX_ORIGINAL_IMAGE_MB } from "../lib/image.ts";
-import { getImportUsage, IMPORT_ACCEPT, IMPORT_IMAGE_ACCEPT, importFromFile, MAX_PDF_MB } from "../lib/imports.ts";
+import { IMAGE_ACCEPT, isTouchDevice, MAX_ORIGINAL_IMAGE_MB } from "../lib/image.ts";
+import { getImportUsage, IMPORT_ACCEPT, importFromFile, MAX_PDF_MB } from "../lib/imports.ts";
 import type { ImportResponse, ImportUsage } from "../types.ts";
 
 // Mensagens que vão mudando enquanto a IA trabalha, para a espera não parecer travada
@@ -22,7 +22,7 @@ export function ImportPanel({ onImported }: { onImported: (response: ImportRespo
   const fileInput = useRef<HTMLInputElement>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
   // Celular e tablet: botões separados para câmera e galeria (o seletor único nem sempre oferece a câmera)
-  const [isTouch] = useState(() => window.matchMedia("(pointer: coarse)").matches);
+  const [isTouch] = useState(isTouchDevice);
 
   useEffect(() => {
     getImportUsage()
@@ -169,7 +169,7 @@ export function ImportPanel({ onImported }: { onImported: (response: ImportRespo
           <input
             ref={cameraInput}
             type="file"
-            accept={IMPORT_IMAGE_ACCEPT}
+            accept={IMAGE_ACCEPT}
             capture="environment"
             disabled={noCredits}
             tabIndex={-1}

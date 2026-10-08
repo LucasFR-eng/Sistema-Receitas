@@ -1,8 +1,9 @@
-import { useId, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import { useId, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { ApiError, uploadImage, type FieldErrors } from "../lib/api.ts";
 import { DIFFICULTY_LABELS, mediaUrl, RECIPE_CATEGORIES } from "../lib/recipes.ts";
 import type { Difficulty, RecipeInput, RecipeStatus, Visibility } from "../types.ts";
 import { FormError } from "./AuthCard.tsx";
+import { PhotoPickerButtons } from "./PhotoPickerButtons.tsx";
 import { TextField } from "./TextField.tsx";
 
 import { MAX_ORIGINAL_IMAGE_MB } from "../lib/image.ts";
@@ -145,7 +146,6 @@ export function RecipeForm({ initialValues, onSave, onReorganize }: RecipeFormPr
   const [saving, setSaving] = useState<RecipeStatus | null>(null);
   const [uploading, setUploading] = useState(false);
   const [reorganizing, setReorganizing] = useState(false);
-  const fileInput = useRef<HTMLInputElement>(null);
   const ids = useId();
 
   function update<K extends keyof FormState>(field: K, value: FormState[K]) {
@@ -285,14 +285,12 @@ export function RecipeForm({ initialValues, onSave, onReorganize }: RecipeFormPr
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => fileInput.current?.click()}
-                disabled={uploading}
-                className="rounded-lg bg-white px-3 py-2 text-sm font-medium text-stone-700 shadow-sm ring-1 ring-stone-300 transition hover:bg-stone-50 disabled:opacity-60"
-              >
-                {form.photoUrl ? "Trocar foto" : "Escolher foto"}
-              </button>
+              <PhotoPickerButtons
+                hasPhoto={Boolean(form.photoUrl)}
+                uploading={uploading}
+                camera="environment"
+                onChange={handlePhoto}
+              />
               {form.photoUrl && (
                 <button
                   type="button"
@@ -303,13 +301,6 @@ export function RecipeForm({ initialValues, onSave, onReorganize }: RecipeFormPr
                 </button>
               )}
             </div>
-            <input
-              ref={fileInput}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handlePhoto}
-              className="hidden"
-            />
           </div>
           <FieldMessage error={fieldErrors.photoUrl?.[0]} hint="JPG, PNG ou WEBP. Fotos grandes são reduzidas automaticamente." />
         </div>

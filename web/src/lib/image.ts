@@ -2,6 +2,14 @@
 // e reduzimos no navegador antes de enviar (a Vercel não aceita envios acima de 4,5 MB).
 export const MAX_ORIGINAL_IMAGE_MB = 25;
 
+// Fotos aceitas no envio (o servidor confere o tipo real pelos primeiros bytes)
+export const IMAGE_ACCEPT = "image/jpeg,image/png,image/webp";
+
+// Celular ou tablet (tela de toque): mostra botões separados para câmera e galeria
+export function isTouchDevice() {
+  return window.matchMedia("(pointer: coarse)").matches;
+}
+
 const JPEG_QUALITY = 0.85;
 // Abaixo disso, se a imagem já não for grande demais, envia como está
 const SMALL_FILE_BYTES = 1_000_000;

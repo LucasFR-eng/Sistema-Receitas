@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { isTouchDevice } from "../lib/image.ts";
 
 // Evento do Chrome (Android) que deixa abrir a instalação a partir de um botão do próprio site
 interface BeforeInstallPromptEvent extends Event {
@@ -38,7 +39,7 @@ function recentlyDismissed() {
 export function InstallPrompt() {
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [hidden, setHidden] = useState(
-    () => isInstalled() || recentlyDismissed() || !window.matchMedia("(pointer: coarse)").matches,
+    () => isInstalled() || recentlyDismissed() || !isTouchDevice(),
   );
 
   useEffect(() => {
