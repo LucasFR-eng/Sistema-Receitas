@@ -5,7 +5,8 @@ import { compressImage } from "./image.ts";
 
 // PDFs são enviados como estão (a Vercel aceita até 4,5 MB); fotos são reduzidas antes
 export const MAX_PDF_MB = 4;
-export const IMPORT_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
+export const IMPORT_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp";
+export const IMPORT_ACCEPT = `${IMPORT_IMAGE_ACCEPT},application/pdf`;
 
 // 2000px no lado maior mantém letras pequenas legíveis para a IA
 export async function importFromFile(file: File) {
